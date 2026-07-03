@@ -10,8 +10,8 @@ import { QRCodeSVG } from "qrcode.react";
 
 const MAROON = "#8C1515";
 const BLACK  = "#111111";
-const LOGO_LOCKUP = "https://raw.githubusercontent.com/drewdog88/ewa-website/main/assets/eastlake_wolves_lockup_1.png";
-const LOGO_WOLF   = "https://raw.githubusercontent.com/drewdog88/ewa-website/main/assets/ewa-wolf.jpg";
+const LOGO_LOCKUP = "/assets/eastlake_wolves_lockup_1.png";
+const LOGO_WOLF   = "/assets/ewa-wolf.jpg";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
