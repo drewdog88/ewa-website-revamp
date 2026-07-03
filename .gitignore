@@ -1,0 +1,23 @@
+# Brainstorm / planning scratch (superpowers companion state)
+.superpowers/
+
+# Original Figma export bundle (kept locally, not part of the app)
+FIGMAImport/
+
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output
+dist/
+build/
+.vercel/
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+
+# OS / editor
+.DS_Store
+*.log
