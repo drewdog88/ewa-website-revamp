@@ -1,6 +1,39 @@
 // Session auth: signed HTTP-only cookie holding a short JWT. Single admin class.
 import jwt from "jsonwebtoken";
-import { parse as parseCookie, serialize as serializeCookie } from "cookie";
+
+// Minimal cookie parse/serialize. Inlined on purpose: the `cookie` npm package
+// shipped breaking API renames across majors (v2 dropped parse/serialize), which
+// silently broke auth in production. One session cookie needs no dependency.
+function serializeCookie(name, value, opts = {}) {
+  let out = `${name}=${encodeURIComponent(value)}`;
+  if (opts.maxAge != null) out += `; Max-Age=${Math.floor(opts.maxAge)}`;
+  if (opts.path) out += `; Path=${opts.path}`;
+  if (opts.httpOnly) out += "; HttpOnly";
+  if (opts.secure) out += "; Secure";
+  if (opts.sameSite) {
+    const s = String(opts.sameSite);
+    out += `; SameSite=${s.charAt(0).toUpperCase()}${s.slice(1)}`;
+  }
+  return out;
+}
+
+function parseCookie(header) {
+  const out = {};
+  if (!header) return out;
+  for (const part of header.split(";")) {
+    const i = part.indexOf("=");
+    if (i < 0) continue;
+    const k = part.slice(0, i).trim();
+    if (!k || k in out) continue;
+    const raw = part.slice(i + 1).trim();
+    try {
+      out[k] = decodeURIComponent(raw);
+    } catch {
+      out[k] = raw;
+    }
+  }
+  return out;
+}
 
 const COOKIE = "ewa_session";
 const MAX_AGE = 60 * 60 * 24 * 7; // 7 days
