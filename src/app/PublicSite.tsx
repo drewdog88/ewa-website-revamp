@@ -19,7 +19,9 @@ const LOGO_WOLF = "/assets/ewa-wolf.jpg";
 // types is treated as text and can never inject markup. Newlines are preserved
 // by the caller's `whitespace-pre-line`.
 function renderBody(text: string): ReactNode {
-  const re = /\[([^\]]+)\]\((https?:\/\/[^\s)]+|\/[^\s)]+)\)|(https?:\/\/[^\s]+)/g;
+  // href may be an external URL, a site path (/api/artifacts/3), or an in-page
+  // section anchor (#resources). Bare http(s) URLs are auto-linked too.
+  const re = /\[([^\]]+)\]\((https?:\/\/[^\s)]+|[/#][^\s)]+)\)|(https?:\/\/[^\s]+)/g;
   const nodes: ReactNode[] = [];
   let last = 0;
   let key = 0;
@@ -28,8 +30,10 @@ function renderBody(text: string): ReactNode {
     if (m.index > last) nodes.push(text.slice(last, m.index));
     const label = m[1] ?? m[3];
     const href = m[2] ?? m[3];
+    const external = /^https?:\/\//.test(href);
     nodes.push(
-      <a key={key++} href={href} target="_blank" rel="noopener noreferrer"
+      <a key={key++} href={href}
+        {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
         className="font-bold underline underline-offset-2 hover:opacity-80 transition-opacity"
         style={{ color: MAROON }}>
         {label}
