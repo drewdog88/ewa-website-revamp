@@ -26,3 +26,4 @@ build/
 *.log
 .vercel
 .env*
+.wiki-build/

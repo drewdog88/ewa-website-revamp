@@ -1,0 +1,69 @@
+name: Sync Wiki
+
+# Mirrors the version-controlled wiki/ directory to the repo's GitHub Wiki
+# (the separate <repo>.wiki.git). The wiki/ folder in this repo is the source of
+# truth — edit and review pages here via pull requests; this job publishes them.
+#
+# One-time prerequisite: the GitHub Wiki must be initialized once via the UI
+# (repo → Wiki → Create the first page) before this workflow can push to it.
+#
+# Security note: the token is passed only via env: and the remote URL is built
+# from GITHUB_REPOSITORY (a trusted, GitHub-provided value) — this workflow
+# consumes no untrusted external input (no issue/PR/comment text), so it is not
+# injectable.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "wiki/**"
+      - ".github/workflows/sync-wiki.yml"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-wiki
+  cancel-in-progress: true
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo (source of truth)
+        uses: actions/checkout@v4
+
+      - name: Clone the GitHub Wiki
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          git clone \
+            "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.wiki.git" \
+            wiki-remote
+
+      - name: Mirror wiki/ into the wiki clone
+        run: |
+          set -euo pipefail
+          # rsync the tracked wiki content over the top, deleting pages that were
+          # removed from wiki/. Keep the wiki repo's own .git.
+          rsync -a --delete \
+            --exclude='.git/' \
+            wiki/ wiki-remote/
+
+      - name: Commit & push if changed
+        working-directory: wiki-remote
+        env:
+          SOURCE_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "Wiki already up to date — nothing to publish."
+            exit 0
+          fi
+          git commit -m "Sync wiki from ${SOURCE_SHA:0:7}"
+          git push origin HEAD:master
