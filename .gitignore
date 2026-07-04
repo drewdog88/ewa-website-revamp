@@ -4,6 +4,9 @@
 # Original Figma export bundle (kept locally, not part of the app)
 FIGMAImport/
 
+# Internal design spec — kept locally, never published to this public repo
+docs/
+
 # Dependencies
 node_modules/
 .pnpm-store/
