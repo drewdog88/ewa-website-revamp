@@ -7,6 +7,9 @@ import type { Club, NewsItem, Officer, Resource, Fundraiser } from "./api";
 
 const MAROON = "#8C1515";
 const BLACK = "#111111";
+// Softer dark slate used for the "frame" sections (hero, sticky nav, footer) so
+// they read as distinct from the white content without being harsh pure-black.
+const CHARCOAL = "#262b33";
 const LOGO_LOCKUP = "/assets/eastlake_wolves_lockup_1.png";
 const LOGO_WOLF = "/assets/ewa-wolf.jpg";
 
@@ -110,11 +113,11 @@ export function PublicSite({
       </header>
 
       {/* HERO */}
-      <section id="home" className="relative min-h-screen flex items-center overflow-hidden" style={{ background: BLACK }}>
+      <section id="home" className="relative min-h-screen flex items-center overflow-hidden" style={{ background: CHARCOAL }}>
         <div className="absolute inset-0 bg-cover bg-center opacity-15"
           style={{ backgroundImage: "url('https://images.unsplash.com/photo-1461896836934-ffe607ba8211?w=1600&h=900&fit=crop&auto=format')" }}
           aria-hidden="true" />
-        <div className="absolute inset-0" style={{ background: `linear-gradient(135deg, ${BLACK} 0%, ${BLACK}cc 60%, ${BLACK}80 100%)` }} aria-hidden="true" />
+        <div className="absolute inset-0" style={{ background: `linear-gradient(135deg, ${CHARCOAL} 0%, ${CHARCOAL}cc 60%, ${CHARCOAL}80 100%)` }} aria-hidden="true" />
 
         <div className="relative max-w-7xl mx-auto px-6 pt-24 pb-20 w-full grid md:grid-cols-2 gap-12 items-center">
           <div>
@@ -165,6 +168,29 @@ export function PublicSite({
               <div className="text-white/60 text-[10px] font-bold tracking-[0.18em] uppercase mt-1">{stat.label}</div>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* ABOUT / WHO WE ARE */}
+      <section id="about" className="py-24 bg-background border-b border-border">
+        <div className="max-w-4xl mx-auto px-6">
+          <div className="font-black text-[10px] tracking-[0.25em] uppercase mb-3" style={{ color: MAROON }}>Who We Are</div>
+          <h2 className="font-black leading-none uppercase mb-8" style={{ fontFamily: "var(--font-display)", color: BLACK, fontSize: "clamp(2.5rem, 5vw, 3.75rem)" }}>
+            About EWA
+          </h2>
+          <div className="space-y-6 text-lg leading-relaxed text-muted-foreground">
+            <p>
+              The Eastlake Wolfpack Association (EWA) is dedicated to supporting and enhancing the
+              athletics, arts &amp; sciences programs at Eastlake High School. We work closely with
+              booster clubs, coaches, and the community to provide resources, funding, and
+              opportunities for our student-athletes to excel both on and off the field and beyond
+              the classroom.
+            </p>
+            <p>
+              We are a nonprofit organization recognized by the IRS as a 501(c)(3) with Tax
+              Identification&nbsp;# 77-0616862.
+            </p>
+          </div>
         </div>
       </section>
 
@@ -247,23 +273,23 @@ export function PublicSite({
       </section>
 
       {/* NEWS */}
-      <section id="news" className="py-24" style={{ background: BLACK }}>
+      <section id="news" className="py-24 bg-background">
         <div className="max-w-7xl mx-auto px-6">
           <div className="mb-12 flex items-end justify-between gap-6 flex-wrap">
             <div>
               <div className="font-black text-[10px] tracking-[0.25em] uppercase mb-3" style={{ color: MAROON }}>Latest Updates</div>
-              <h2 className="font-black text-white leading-none uppercase" style={{ fontFamily: "var(--font-display)", fontSize: "clamp(2.5rem, 5vw, 3.75rem)" }}>
+              <h2 className="font-black leading-none uppercase" style={{ fontFamily: "var(--font-display)", color: BLACK, fontSize: "clamp(2.5rem, 5vw, 3.75rem)" }}>
                 News &<br />Announcements
               </h2>
             </div>
           </div>
 
           {news.length === 0 ? (
-            <p className="text-white/40 text-sm">No announcements yet — check back soon.</p>
+            <p className="text-muted-foreground text-sm">No announcements yet — check back soon.</p>
           ) : (
             <div className="grid md:grid-cols-3 gap-6">
               {news.map((article) => (
-                <article key={article.id} className="bg-white/5 border border-white/10 rounded-2xl p-6 hover:bg-white/8 hover:-translate-y-1 transition-all group">
+                <article key={article.id} className="bg-card border border-border rounded-2xl p-6 hover:shadow-lg hover:-translate-y-1 transition-all group">
                   <div className="flex items-center gap-3 mb-4 flex-wrap">
                     {article.tag && (
                       <span className="text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded" style={tagStyle(article.tag)}>
@@ -271,13 +297,13 @@ export function PublicSite({
                       </span>
                     )}
                     {article.publishedAt && (
-                      <span className="text-white/40 text-xs flex items-center gap-1"><Calendar size={11} /> {formatDate(article.publishedAt)}</span>
+                      <span className="text-muted-foreground text-xs flex items-center gap-1"><Calendar size={11} /> {formatDate(article.publishedAt)}</span>
                     )}
                   </div>
-                  <h3 className="font-black text-white text-xl uppercase leading-tight mb-3" style={{ fontFamily: "var(--font-display)" }}>
+                  <h3 className="font-black text-xl uppercase leading-tight mb-3" style={{ fontFamily: "var(--font-display)", color: BLACK }}>
                     {article.title}
                   </h3>
-                  <p className="text-white/50 text-sm leading-relaxed whitespace-pre-line">{article.body}</p>
+                  <p className="text-muted-foreground text-sm leading-relaxed whitespace-pre-line">{article.body}</p>
                 </article>
               ))}
             </div>
@@ -314,23 +340,23 @@ export function PublicSite({
       </section>
 
       {/* RESOURCES */}
-      <section id="resources" className="py-24" style={{ background: BLACK }}>
+      <section id="resources" className="py-24 bg-background">
         <div className="max-w-7xl mx-auto px-6">
           <div className="mb-12">
             <div className="font-black text-[10px] tracking-[0.25em] uppercase mb-3" style={{ color: MAROON }}>Helpful Links</div>
-            <h2 className="font-black text-white leading-none uppercase" style={{ fontFamily: "var(--font-display)", fontSize: "clamp(2.5rem, 5vw, 3.75rem)" }}>
+            <h2 className="font-black leading-none uppercase" style={{ fontFamily: "var(--font-display)", color: BLACK, fontSize: "clamp(2.5rem, 5vw, 3.75rem)" }}>
               Quick Resources
             </h2>
           </div>
           <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
             {resources.map((link) => (
               <a key={link.id} href={link.url || "#"} target={link.url?.startsWith("http") ? "_blank" : undefined} rel="noopener noreferrer"
-                className="group bg-white/5 border border-white/10 rounded-2xl p-6 hover:border-white/25 transition-all block">
+                className="group bg-card border border-border rounded-2xl p-6 hover:shadow-lg hover:-translate-y-1 transition-all block">
                 <div className="w-10 h-10 rounded-full flex items-center justify-center mb-4" style={{ background: `${MAROON}25` }}>
-                  <ExternalLink size={16} style={{ color: "#c25555" }} />
+                  <ExternalLink size={16} style={{ color: MAROON }} />
                 </div>
-                <div className="font-black text-white text-lg uppercase tracking-wide mb-2 group-hover:opacity-80 transition-opacity" style={{ fontFamily: "var(--font-display)" }}>{link.title}</div>
-                {link.description && <div className="text-white/45 text-sm leading-relaxed">{link.description}</div>}
+                <div className="font-black text-lg uppercase tracking-wide mb-2 group-hover:opacity-80 transition-opacity" style={{ fontFamily: "var(--font-display)", color: BLACK }}>{link.title}</div>
+                {link.description && <div className="text-muted-foreground text-sm leading-relaxed">{link.description}</div>}
               </a>
             ))}
           </div>
@@ -338,7 +364,7 @@ export function PublicSite({
       </section>
 
       {/* FOOTER */}
-      <footer className="border-t border-white/10" style={{ background: BLACK }}>
+      <footer className="border-t border-white/10" style={{ background: `linear-gradient(180deg, ${CHARCOAL} 0%, ${BLACK} 100%)` }}>
         <div className="max-w-7xl mx-auto px-6 py-12">
           <div className="grid md:grid-cols-3 gap-10 mb-10">
             <div>
