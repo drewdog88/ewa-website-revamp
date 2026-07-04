@@ -1,0 +1,154 @@
+name: Restore Drill (verify DB backup integrity)
+
+# Proves the nightly pg_dump backups (see backup.yml) are actually RESTORABLE —
+# on a routine schedule and on demand. It downloads a backup Release asset and
+# restores it into an EPHEMERAL PostgreSQL 17 service container (never the live
+# Neon DB), then asserts the schema and data came back. A green run = the backup
+# is good. There is no external target and no risk to production data.
+#
+# Security note: the only external input is the optional `tag` (workflow_dispatch),
+# passed via env: (INPUT_TAG) and only ever used quoted as an argument — never
+# interpolated into a run: command. The GitHub token is passed via env:. This
+# workflow consumes no untrusted issue/PR/comment text, so it is not injectable.
+
+on:
+  schedule:
+    - cron: "0 10 * * 1" # 10:00 UTC every Monday (a few hours after nightly backups)
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Backup release tag to test (blank = newest backup-*)"
+        required: false
+        default: ""
+
+concurrency:
+  group: restore-drill
+  cancel-in-progress: false
+
+permissions:
+  contents: read # download Release assets
+  issues: write # open an alert issue if a drill fails
+
+jobs:
+  drill:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17 # match the Neon server major
+        env:
+          POSTGRES_PASSWORD: drill
+          POSTGRES_DB: restore_target
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      TARGET: postgresql://postgres:drill@localhost:5432/restore_target
+    steps:
+      - name: Install PostgreSQL 17 client + age
+        run: |
+          sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
+          curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/pgdg.gpg
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client-17 age
+          # Put the 17 binaries first (the /usr/bin wrapper defaults to client 16).
+          echo "/usr/lib/postgresql/17/bin" >> "$GITHUB_PATH"
+
+      - name: Download + decrypt backup to test
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INPUT_TAG: ${{ github.event.inputs.tag }}
+          # PRIVATE age key (age identity, "AGE-SECRET-KEY-1..."), held only here.
+          AGE_KEY: ${{ secrets.BACKUP_AGE_KEY }}
+        run: |
+          if [ -z "$AGE_KEY" ]; then
+            echo "::error::BACKUP_AGE_KEY secret is not set — cannot decrypt the backup."
+            echo "::error::See BACKUP.md → 'One-time setup'."
+            exit 1
+          fi
+          TAG="$INPUT_TAG"
+          if [ -z "$TAG" ]; then
+            TAG="$(gh release list --repo "$GITHUB_REPOSITORY" --limit 200 --json tagName,createdAt \
+              --jq 'map(select(.tagName|startswith("backup-"))) | sort_by(.createdAt) | reverse | .[0].tagName')"
+          fi
+          if [ -z "$TAG" ]; then echo "::error::No backup-* release found to test."; exit 1; fi
+          echo "Testing backup: $TAG"
+          echo "TAG=$TAG" >> "$GITHUB_ENV"
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern '*.dump.age' --dir .
+          ENC="$(ls *.dump.age)"
+          # Write the identity to a private file (ephemeral runner), decrypt, remove it.
+          umask 077; printf '%s\n' "$AGE_KEY" > age.key
+          DUMP="${ENC%.age}"
+          age -d -i age.key -o "$DUMP" "$ENC"
+          rm -f age.key
+          echo "DUMP=$DUMP" >> "$GITHUB_ENV"
+          SIZE=$(stat -c%s "$DUMP")
+          echo "Decrypted dump: $DUMP (${SIZE} bytes)"
+          [ "$SIZE" -ge 1024 ] || { echo "::error::Dump suspiciously small (${SIZE} bytes)."; exit 1; }
+
+      - name: Validate the archive is well-formed
+        run: |
+          pg_restore --list "$DUMP" > toc.txt
+          echo "Archive TOC entries: $(wc -l < toc.txt)"
+
+      - name: Restore into ephemeral Postgres
+        run: pg_restore --no-owner --no-privileges -d "$TARGET" "$DUMP"
+
+      - name: Verify schema + data
+        run: |
+          set -euo pipefail
+          EXPECTED="artifacts clubs fundraiser news officers payment_methods resources users"
+          {
+            echo "## Restore drill — $TAG"
+            echo ""
+            echo "| table | rows |"
+            echo "|---|---|"
+          } >> "$GITHUB_STEP_SUMMARY"
+          fail=0
+          for t in $EXPECTED; do
+            if [ "$(psql "$TARGET" -tAc "SELECT to_regclass('public.$t') IS NOT NULL")" != "t" ]; then
+              echo "::error::Expected table '$t' missing after restore."
+              echo "| $t | **MISSING** |" >> "$GITHUB_STEP_SUMMARY"
+              fail=1
+              continue
+            fi
+            c="$(psql "$TARGET" -tAc "SELECT count(*) FROM \"$t\"")"
+            echo "| $t | $c |" >> "$GITHUB_STEP_SUMMARY"
+          done
+          # Critical: without at least one user row, the restored DB can't be logged into.
+          users="$(psql "$TARGET" -tAc "SELECT count(*) FROM users")"
+          {
+            echo ""
+            echo "**users rows: ${users}**"
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ "${users:-0}" -lt 1 ]; then
+            echo "::error::No rows in 'users' — a restore from this backup would not allow admin login."
+            fail=1
+          fi
+          if [ "$fail" -ne 0 ]; then
+            echo "::error::Restore drill FAILED — this backup is not cleanly restorable."
+            echo "" >> "$GITHUB_STEP_SUMMARY"; echo "Result: **FAILED** ❌" >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          echo "" >> "$GITHUB_STEP_SUMMARY"; echo "Result: **PASSED** ✅" >> "$GITHUB_STEP_SUMMARY"
+          echo "Restore drill PASSED"
+
+      - name: Alert on failure (open/append a GitHub issue)
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          # Body assembled from trusted GitHub context only (no external input).
+          BODY="$(printf 'The scheduled restore-integrity drill FAILED — the most recent DB backup could not be cleanly restored/verified.\n\nRun: %s\n\nInvestigate before it is needed: open the run, read the **Verify schema + data** step, and check the newest `backup-*` release. See BACKUP.md.' "$RUN_URL")"
+          # De-dupe: comment on an existing open alert if one is present, else open a new one.
+          EXISTING="$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --label restore-drill-failure --json number --jq '.[0].number' 2>/dev/null || true)"
+          if [ -n "$EXISTING" ]; then
+            gh issue comment "$EXISTING" --repo "$GITHUB_REPOSITORY" --body "$BODY"
+          else
+            gh label create restore-drill-failure --repo "$GITHUB_REPOSITORY" --color b60205 --description "Restore drill failures" 2>/dev/null || true
+            gh issue create --repo "$GITHUB_REPOSITORY" --title "🔴 Restore drill failed — backup may not be restorable" --label restore-drill-failure --body "$BODY"
+          fi
