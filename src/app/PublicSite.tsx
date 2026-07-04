@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, type ReactNode } from "react";
 import {
   Menu, X, ArrowRight, Calendar, QrCode, ExternalLink, Globe, Heart,
 } from "lucide-react";
@@ -12,6 +12,34 @@ const BLACK = "#111111";
 const CHARCOAL = "#262b33";
 const LOGO_LOCKUP = "/assets/eastlake_wolves_lockup_1.png";
 const LOGO_WOLF = "/assets/ewa-wolf.jpg";
+
+// Render a plain-text body with safe, clickable links. Supports friendly
+// markdown-style links — [Label](https://…) — and bare http(s) URLs. It builds
+// real React elements (never dangerouslySetInnerHTML), so anything an admin
+// types is treated as text and can never inject markup. Newlines are preserved
+// by the caller's `whitespace-pre-line`.
+function renderBody(text: string): ReactNode {
+  const re = /\[([^\]]+)\]\((https?:\/\/[^\s)]+|\/[^\s)]+)\)|(https?:\/\/[^\s]+)/g;
+  const nodes: ReactNode[] = [];
+  let last = 0;
+  let key = 0;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) {
+    if (m.index > last) nodes.push(text.slice(last, m.index));
+    const label = m[1] ?? m[3];
+    const href = m[2] ?? m[3];
+    nodes.push(
+      <a key={key++} href={href} target="_blank" rel="noopener noreferrer"
+        className="font-bold underline underline-offset-2 hover:opacity-80 transition-opacity"
+        style={{ color: MAROON }}>
+        {label}
+      </a>
+    );
+    last = m.index + m[0].length;
+  }
+  if (last < text.length) nodes.push(text.slice(last));
+  return nodes;
+}
 
 function formatDate(iso: string | null): string {
   if (!iso) return "";
@@ -303,7 +331,7 @@ export function PublicSite({
                   <h3 className="font-black text-xl uppercase leading-tight mb-3" style={{ fontFamily: "var(--font-display)", color: BLACK }}>
                     {article.title}
                   </h3>
-                  <p className="text-muted-foreground text-sm leading-relaxed whitespace-pre-line">{article.body}</p>
+                  <p className="text-muted-foreground text-sm leading-relaxed whitespace-pre-line">{article.body ? renderBody(article.body) : null}</p>
                 </article>
               ))}
             </div>

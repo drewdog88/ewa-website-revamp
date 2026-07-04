@@ -4,9 +4,22 @@ import { sql } from "../_lib/db.js";
 import { json, methodGuard, readBody } from "../_lib/http.js";
 import { requireAuth } from "../_lib/auth.js";
 
-const all = () => sql`
-  SELECT id, title, body, tag, is_published, published_at
-  FROM news ORDER BY published_at DESC NULLS LAST, id DESC`;
+// Return camelCase rows so the admin UI reads isPublished/publishedAt correctly
+// (the public /api/news maps the same way — without this the UI saw only the raw
+// snake_case columns, so every post showed as "Draft" and the edit toggle was wrong).
+const all = async () => {
+  const rows = await sql`
+    SELECT id, title, body, tag, is_published, published_at
+    FROM news ORDER BY published_at DESC NULLS LAST, id DESC`;
+  return rows.map((r) => ({
+    id: r.id,
+    title: r.title,
+    body: r.body,
+    tag: r.tag,
+    isPublished: r.is_published,
+    publishedAt: r.published_at,
+  }));
+};
 
 export default async function handler(req, res) {
   if (!methodGuard(req, res, ["GET", "POST", "PUT", "DELETE"])) return;
