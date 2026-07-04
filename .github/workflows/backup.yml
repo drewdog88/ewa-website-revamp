@@ -1,0 +1,77 @@
+name: Weekly DB Backup
+
+# Dumps the Neon database, encrypts it with `age`, and commits the ciphertext
+# into backups/. The repo is PUBLIC, so the dump is ONLY ever committed after
+# age encryption — plaintext never touches the repository.
+#
+# Required repository secrets (Settings -> Secrets and variables -> Actions):
+#   DATABASE_URL_UNPOOLED  - Neon *direct* (non-pooler) connection string
+#   AGE_PUBLIC_KEY         - age recipient public key (age1...)
+#
+# See BACKUP_AND_RESTORE.md for one-time setup.
+
+on:
+  schedule:
+    - cron: "0 9 * * 0"   # Sundays 09:00 UTC
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: db-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pg_dump 17 and age
+        run: |
+          curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+            | sudo gpg --dearmor -o /usr/share/keyrings/pgdg.gpg
+          echo "deb [signed-by=/usr/share/keyrings/pgdg.gpg] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" \
+            | sudo tee /etc/apt/sources.list.d/pgdg.list >/dev/null
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client-17 age
+
+      - name: Dump, gzip, and encrypt
+        env:
+          DATABASE_URL_UNPOOLED: ${{ secrets.DATABASE_URL_UNPOOLED }}
+          AGE_PUBLIC_KEY: ${{ secrets.AGE_PUBLIC_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${DATABASE_URL_UNPOOLED:-}" ] || [ -z "${AGE_PUBLIC_KEY:-}" ]; then
+            echo "::error::DATABASE_URL_UNPOOLED and AGE_PUBLIC_KEY secrets are required." >&2
+            exit 1
+          fi
+          mkdir -p backups
+          STAMP="$(date -u +%Y-%m-%d)"
+          OUT="backups/ewa-${STAMP}.sql.gz.age"
+          /usr/lib/postgresql/17/bin/pg_dump "$DATABASE_URL_UNPOOLED" \
+            --no-owner --no-privileges --clean --if-exists \
+            | gzip -9 \
+            | age -r "$AGE_PUBLIC_KEY" -o "$OUT"
+          echo "Wrote $OUT ($(du -h "$OUT" | cut -f1))"
+
+      - name: Prune to the 12 most recent backups
+        run: |
+          set -euo pipefail
+          cd backups
+          ls -1t ewa-*.sql.gz.age 2>/dev/null | tail -n +13 | xargs -r rm --
+          cd ..
+
+      - name: Commit backup
+        run: |
+          set -euo pipefail
+          git config user.name "ewa-backup-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add backups/
+          if git diff --cached --quiet; then
+            echo "No backup changes to commit."
+          else
+            git commit -m "chore(backup): encrypted DB snapshot $(date -u +%F)"
+            git push
+          fi
