@@ -95,8 +95,8 @@ export const api = {
 
   // ---- auth ----
   me: () => req<{ username: string }>("/api/auth/me"),
-  login: (username: string, password: string) =>
-    req<{ ok: true; username: string }>("/api/auth/login", { method: "POST", ...body({ username, password }) }),
+  login: (username: string, password: string, turnstileToken: string | null) =>
+    req<{ ok: true; username: string }>("/api/auth/login", { method: "POST", ...body({ username, password, turnstileToken }) }),
   logout: () => req<{ ok: true }>("/api/auth/logout", { method: "POST" }),
 
   // ---- admin: clubs ----

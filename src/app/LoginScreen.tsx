@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { ChevronLeft, Lock, LogIn } from "lucide-react";
 import { api } from "./api";
+import { Turnstile, type TurnstileHandle } from "./components/Turnstile";
 
 const MAROON = "#8C1515";
 const BLACK = "#111111";
@@ -11,16 +12,23 @@ export function LoginScreen({ onSuccess, onBack }: { onSuccess: (username: strin
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // Cloudflare Turnstile token; null until the (usually invisible) check passes.
+  const [captcha, setCaptcha] = useState<string | null>(null);
+  const turnstile = useRef<TurnstileHandle | null>(null);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setBusy(true);
     try {
-      const res = await api.login(username.trim(), password);
+      const res = await api.login(username.trim(), password, captcha);
       onSuccess(res.username);
     } catch (err) {
-      setError(err instanceof Error && err.message !== "401" ? "Invalid username or password" : "Invalid username or password");
+      const msg = err instanceof Error ? err.message : "";
+      setError(msg === "Security check failed" ? "Security check failed. Please try again." : "Invalid username or password");
+      // Turnstile tokens are single-use: get a fresh one for the next attempt.
+      setCaptcha(null);
+      turnstile.current?.reset();
     } finally {
       setBusy(false);
     }
@@ -54,9 +62,11 @@ export function LoginScreen({ onSuccess, onBack }: { onSuccess: (username: strin
                 style={{ ["--tw-ring-color" as string]: MAROON }} />
             </div>
 
+            <Turnstile onToken={setCaptcha} onError={setError} handleRef={turnstile} />
+
             {error && <div className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</div>}
 
-            <button type="submit" disabled={busy || !username || !password}
+            <button type="submit" disabled={busy || !username || !password || !captcha}
               className="w-full flex items-center justify-center gap-2 text-white font-black text-xs py-3 rounded-xl uppercase tracking-widest transition-colors hover:opacity-90 disabled:opacity-50"
               style={{ background: MAROON }}>
               {busy ? "Signing in…" : <><LogIn size={14} /> Sign In</>}
