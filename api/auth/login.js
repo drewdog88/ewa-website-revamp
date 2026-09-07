@@ -68,9 +68,9 @@ export default async function handler(req, res) {
     if (!ok) return json(res, 401, { error: "Invalid username or password" });
 
     setSessionCookie(res, signSession(username));
-    json(res, 200, { ok: true, username });
+    return json(res, 200, { ok: true, username });
   } catch (e) {
     console.error("POST /api/auth/login failed:", e);
-    json(res, 500, { error: "Login failed" });
+    return json(res, 500, { error: "Login failed" });
   }
 }
