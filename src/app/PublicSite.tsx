@@ -4,6 +4,7 @@ import {
 } from "lucide-react";
 import { PaymentModal } from "./PaymentModal";
 import type { Club, NewsItem, Officer, Resource, Fundraiser } from "./api";
+import { ORG_CHARITIES_REG, ORG_EIN } from "./org";
 
 const MAROON = "#8C1515";
 const BLACK = "#111111";
@@ -83,6 +84,11 @@ export function PublicSite({
     return () => window.removeEventListener("scroll", h);
   }, []);
 
+  useEffect(() => {
+    const id = window.location.hash.replace(/^#/, "");
+    if (id) document.getElementById(id)?.scrollIntoView();
+  }, []);
+
   const activeClubs = clubs.filter((c) => c.active);
   const showFundraiser = !!fundraiser && fundraiser.isActive !== false && fundraiser.goalCents > 0;
   const pct = showFundraiser
@@ -99,12 +105,19 @@ export function PublicSite({
 
   return (
     <div className="min-h-screen bg-background text-foreground" style={{ fontFamily: "var(--font-body)" }}>
+      <a
+        href="#main"
+        className="sr-only focus:not-sr-only focus:absolute focus:z-[60] focus:top-2 focus:left-2 focus:px-4 focus:py-2 focus:rounded focus:bg-white focus:text-sm focus:font-bold"
+        style={{ color: NAVY }}
+      >
+        Skip to main content
+      </a>
       {payingClub && <PaymentModal club={payingClub} onClose={() => setPayingClub(null)} />}
 
       {/* NAV */}
       <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled ? "shadow-md" : "border-b border-border"}`}
         style={{ background: scrolled ? "rgba(255,255,255,0.96)" : "#ffffff", backdropFilter: scrolled ? "blur(8px)" : "none" }}>
-        <nav className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+        <nav className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between" aria-label="Primary">
           <a href="#home" className="flex items-center">
             <img src={LOGO_WOLF} alt="Eastlake Wolves" className="h-10 w-10 object-contain" />
           </a>
@@ -147,6 +160,7 @@ export function PublicSite({
         )}
       </header>
 
+      <main id="main">
       {/* HERO */}
       <section id="home" className="relative min-h-[80vh] flex items-center overflow-hidden bg-background">
         <div className="relative max-w-7xl mx-auto px-6 pt-28 pb-16 w-full grid md:grid-cols-2 gap-12 items-center">
@@ -386,6 +400,7 @@ export function PublicSite({
           </div>
         </div>
       </section>
+      </main>
 
       {/* FOOTER */}
       <footer className="border-t border-white/10" style={{ background: `linear-gradient(180deg, ${CHARCOAL} 0%, ${BLACK} 100%)` }}>
@@ -395,7 +410,7 @@ export function PublicSite({
               <img src={LOGO_LOCKUP} alt="Eastlake Wolves" className="h-12 object-contain mb-4" style={{ filter: "brightness(0) invert(1)" }} />
               <p className="text-white/45 text-sm leading-relaxed max-w-xs">
                 Supporting Eastlake High School athletics, arts &amp; sciences in Sammamish, WA.<br />
-                <span className="text-white/25 text-xs">501(c)(3) · Tax ID 77-0616862</span>
+                <span className="text-white/45 text-xs">501(c)(3) · Tax ID {ORG_EIN} · WA Charities #{ORG_CHARITIES_REG}</span>
               </p>
             </div>
             <div>
@@ -418,8 +433,12 @@ export function PublicSite({
             </div>
           </div>
           <div className="border-t border-white/10 pt-6 flex flex-wrap items-center justify-between gap-4">
-            <span className="text-white/25 text-xs">© 2025 Eastlake Wolfpack Association. All rights reserved.</span>
-            <span className="text-white/25 text-xs">Eastlake High School · Sammamish, WA</span>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+              <span className="text-white/45 text-xs">© 2025 Eastlake Wolfpack Association. All rights reserved.</span>
+              <a href="#privacy" className="text-white/45 hover:text-white text-xs underline underline-offset-2">Privacy</a>
+              <a href="#accessibility" className="text-white/45 hover:text-white text-xs underline underline-offset-2">Accessibility</a>
+            </div>
+            <span className="text-white/45 text-xs">Eastlake High School · Sammamish, WA</span>
           </div>
         </div>
       </footer>

@@ -2,13 +2,24 @@ import { useState, useEffect } from "react";
 import { PublicSite } from "./PublicSite";
 import { AdminPanel } from "./AdminPanel";
 import { LoginScreen } from "./LoginScreen";
+import { LegalPages } from "./LegalPages";
 import { api } from "./api";
 import type { Club, NewsItem, Officer, Resource, Fundraiser } from "./api";
 
 type View = "site" | "login" | "admin";
+type LegalPage = "privacy" | "accessibility";
+
+function legalFromHash(hash: string): LegalPage | null {
+  const h = hash.replace(/^#/, "").split("?")[0];
+  if (h === "privacy" || h === "accessibility") return h;
+  return null;
+}
 
 export default function App() {
   const [view, setView] = useState<View>("site");
+  const [legalPage, setLegalPage] = useState<LegalPage | null>(() =>
+    typeof window === "undefined" ? null : legalFromHash(window.location.hash)
+  );
   const [username, setUsername] = useState<string | null>(null);
 
   const [clubs, setClubs] = useState<Club[]>([]);
@@ -32,6 +43,12 @@ export default function App() {
     api.me().then((u) => setUsername(u.username)).catch(() => setUsername(null));
   }, []);
 
+  useEffect(() => {
+    const sync = () => setLegalPage(legalFromHash(window.location.hash));
+    window.addEventListener("hashchange", sync);
+    return () => window.removeEventListener("hashchange", sync);
+  }, []);
+
   const goAdmin = () => setView(username ? "admin" : "login");
 
   const onLoginSuccess = (name: string) => { setUsername(name); setView("admin"); };
@@ -42,6 +59,7 @@ export default function App() {
 
   if (view === "login") return <LoginScreen onSuccess={onLoginSuccess} onBack={() => setView("site")} />;
   if (view === "admin" && username) return <AdminPanel username={username} onBack={backToSite} onLogout={onLogout} />;
+  if (legalPage) return <LegalPages page={legalPage} />;
 
   return (
     <PublicSite
