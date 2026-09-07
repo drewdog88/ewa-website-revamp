@@ -4,17 +4,23 @@ Where the project stands and what's next. Nothing here blocks the site from
 running — the core (public site, admin panel, payments, backups) is built and
 proven.
 
-## Before public launch
+## Already done (was on the old launch list)
 
-A short, concrete checklist to flip from "ready" to "live":
+- Search engines allowed (`index, follow`); AI scrapers blocked in `robots.txt` and middleware
+- Custom domain `eastlakewolfpack.org` in use
+- Cloudflare Turnstile on admin login; BotID advisory
+- Washington Charities disclosure on Pay / Donate; privacy + accessibility hashes
+- Resource list order (admin arrows → public site + footer)
+- Self-hosted fonts (no Google Fonts request)
+- Optional private R2 ops stats for NAS Grafana
+
+## Still worth confirming
 
 | Item | Why | Where |
 |---|---|---|
-| **Remove the `noindex` meta tag** | `index.html` currently ships `<meta name="robots" content="noindex, nofollow">` so search engines skip the pre-launch site. Remove it so the site can be found. | [Deployment](Deployment), [Operations](Operations) |
 | **Confirm all five backup config values are set** | Backups fail on purpose without `AGE_PUBLIC_KEY`; recovery needs the Neon secrets. Run one manual backup + one drill and watch them go green. | [Backups & Recovery](Backups-and-Recovery), [Configuration](Configuration) |
 | **Store the backup private key in a password manager** | Losing it makes every encrypted backup permanently unreadable — the one truly unrecoverable risk. | [Backups & Recovery](Backups-and-Recovery) |
-| **Seed the real board content** | Replace any placeholder clubs / officers / news with the actual roster and announcements. | [Admin Panel](Admin-Panel) |
-| **Point the custom domain at Vercel** | Move from the `*.vercel.app` URL to the club's own domain. | [Deployment](Deployment) |
+| **Keep the Charities Program website field current** | The SOS filing should list `https://eastlakewolfpack.org`. | Washington Charities renewal |
 
 ## Nice-to-have next
 
@@ -41,6 +47,8 @@ Decisions made on purpose — kept here so they aren't re-litigated:
   captures everything. See [Database](Database).
 - **No public sign-up.** `users` is admins-only; the board provisions accounts. See
   [Database](Database).
+- **No marketing analytics or cookie banner.** Public pages do not load analytics
+  scripts. See [FAQ](FAQ) and [Observability](Observability).
 - **No heavyweight framework or separate backend server.** A single Vercel project
   with thin serverless functions is intentionally boring, cheap, and durable across
   volunteer-board turnovers. See [Architecture](Architecture).

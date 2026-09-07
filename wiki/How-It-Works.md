@@ -20,6 +20,12 @@ Key properties:
   an external link, or `/api/artifacts/<id>` when it's an uploaded file — the
   front-end treats both the same (see [Payments](Payments) and
   [Database](Database) for the `url`-vs-`artifact_id` rule).
+- **Resource order.** The public Resources section and footer use the same
+  `sort_order` the board sets with up/down arrows in Admin → Resources.
+- **Legal hashes.** `#privacy` and `#accessibility` swap in short notice pages
+  ([`LegalPages.tsx`](https://github.com/drewdog88/ewa-website-revamp/blob/main/src/app/LegalPages.tsx)).
+  The Pay / Donate modal carries the Washington Charities disclosure (registration
+  1126748). Fonts are self-hosted; there is no marketing analytics script.
 
 ## Flow 2 — An admin logs in and edits
 
@@ -27,8 +33,12 @@ Key properties:
 
 ### Authentication in detail
 
-- **Login.** `POST /api/auth/login` looks up the user, `bcrypt.compare`s the
-  submitted password against the stored hash, and on success signs a JWT
+- **Login.** The form collects a Cloudflare **Turnstile** token (widget on
+  `LoginScreen`). `POST /api/auth/login` verifies that token first (skipped only
+  if `TURNSTILE_SECRET_KEY` is unset — logged, never locks the board out).
+  **Vercel BotID** then classifies the request; it is advisory unless
+  `BOTID_ENFORCE_LOGIN=1`. After that the handler looks up the user,
+  `bcrypt.compare`s the password, and on success signs a JWT
   (`{ sub: username }`, 7-day expiry) with `JWT_SECRET`.
 - **The session cookie.** The JWT is returned as `ewa_session` — **HttpOnly,
   Secure, SameSite=Lax, Path=/**. HttpOnly means JavaScript can't read it, which
@@ -63,9 +73,12 @@ stay within serverless limits and are stored with `decode(dataBase64,'base64')`.
 
 | Concept | Code |
 |---|---|
-| View switching (site/login/admin) | `src/app/App.tsx` |
+| View switching (site / login / admin / legal hashes) | `src/app/App.tsx` |
 | Public content fetchers | `src/app/api.ts` → `/api/*.js` |
+| Privacy / accessibility copy | `src/app/LegalPages.tsx`, `src/app/org.ts` |
+| Turnstile widget | `src/app/components/Turnstile.tsx` |
 | Session cookie + JWT | `api/_lib/auth.js` |
-| Uniform JSON / method guard / body read | `api/_lib/http.js` |
+| Uniform JSON / method guard / body read / ops log | `api/_lib/http.js` |
 | Shared Neon client | `api/_lib/db.js` |
+| Private R2 stats | `api/_lib/ops-log.js`, `api/_lib/r2.js` |
 | Zelle QR URL build/decode | `api/_lib/zelle.js` |

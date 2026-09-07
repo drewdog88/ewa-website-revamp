@@ -82,9 +82,11 @@ default timeout and 1 GB memory. They run stateless, ephemeral, and cold-start o
 every request outside of keep-warm windows. That's why the functions are thin — one
 SQL call, return JSON, done.
 
-Shared helpers (`api/_lib/db.js`, `http.js`, `auth.js`, `zelle.js`) are bundled
-into every function that imports them. Vercel doesn't deploy `_lib/` as routes
-because the underscore prefix is reserved.
+Shared helpers (`api/_lib/db.js`, `http.js`, `auth.js`, `zelle.js`, `ops-log.js`,
+`r2.js`) are bundled into every function that imports them. Vercel doesn't deploy
+`_lib/` as routes because the underscore prefix is reserved. Edge
+[`middleware.ts`](https://github.com/drewdog88/ewa-website-revamp/blob/main/middleware.ts)
+runs on the CDN for BotID and known scraper user-agents.
 
 ## SPA routing and rewrites
 
@@ -112,7 +114,9 @@ store and injected at runtime.
 |---|---|---|
 | `DATABASE_URL` | Neon Postgres connection string (WSS) | `api/_lib/db.js` — the `sql` client |
 | `JWT_SECRET` | HMAC key for signing session tokens | `api/_lib/auth.js` — login/verify |
-| `NEON_POOL_URL` | Neon Postgres Pool connection string (for migration scripts) | `scripts/*.mjs` — DDL + seed |
+| `TURNSTILE_SECRET_KEY` | Cloudflare Turnstile verify on login | `api/auth/login.js` |
+| `BOTID_ENFORCE_LOGIN` | When `1`, BotID blocks flagged logins | `api/auth/login.js` (advisory if unset) |
+| `OPS_R2_*` | Private R2 ops stats (optional) | `api/_lib/ops-log.js` |
 
 See **[Configuration](Configuration)** for the full list, how to set them locally
 (`.env.local`), and how to add them to Vercel's dashboard.
@@ -129,8 +133,9 @@ See **[Configuration](Configuration)** for the full list, how to set them locall
 2. Vercel detects the push via the GitHub integration.
 3. Vercel runs `npm install`, then `npm run build`.
 4. Vercel snapshots the `dist/` directory and every `api/*.js` function.
-5. The new bundle and functions go live at the production URL:  
-   **https://ewa-website-revamp.vercel.app**
+5. The new bundle and functions go live on the custom domain
+   **https://www.eastlakewolfpack.org** (Vercel project URL
+   `ewa-website-revamp.vercel.app` still exists as a fallback).
 6. The previous deployment becomes the rollback target (one-click in Vercel's dashboard).
 
 Total time: **~90 seconds** from push to live.
@@ -161,25 +166,13 @@ Preview deploys are useful for:
 | Direct edit in Vercel dashboard | No deploy (config-only change) |
 | Database content change via admin panel | **No deploy** — content is live instantly |
 
-## Pre-launch checklist
+## Search indexing
 
-Before announcing the site publicly, **remove the `noindex` meta tag** from
-[`index.html`](https://github.com/drewdog88/ewa-website-revamp/blob/main/index.html).
-Right now it reads:
-
-```html
-<meta name="robots" content="noindex, nofollow" />
-```
-
-This tells Google and other search engines **not to index the site**. It's there
-because the site is in preview and we don't want it appearing in search results
-yet. Once the board is ready to go public:
-
-1. Delete that line (line 10 in `index.html`).
-2. Commit: `Remove noindex — site is ready for public launch`.
-3. Push to `main`.
-
-The next deploy will allow search engines to crawl and index the site.
+[`index.html`](https://github.com/drewdog88/ewa-website-revamp/blob/main/index.html) ships
+`<meta name="robots" content="index, follow" />`. [`public/robots.txt`](https://github.com/drewdog88/ewa-website-revamp/blob/main/public/robots.txt)
+allows search engines and disallows common AI training crawlers. Edge
+[`middleware.ts`](https://github.com/drewdog88/ewa-website-revamp/blob/main/middleware.ts)
+also returns 403 for known scraper user-agents.
 
 ## Rollback
 

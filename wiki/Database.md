@@ -85,7 +85,7 @@ file — never both.
 | `description` | text | |
 | `url` | text | External link (used when set) |
 | `artifact_id` | int → artifacts | Uploaded file (FK `ON DELETE SET NULL`) |
-| `sort_order` | int = 0 | |
+| `sort_order` | int = 0 | Admin up/down arrows; public Resources + footer follow this, then `title` |
 | `is_active` | bool = true | |
 
 ## `artifacts`

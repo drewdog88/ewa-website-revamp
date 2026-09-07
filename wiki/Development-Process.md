@@ -33,9 +33,11 @@ Used by the Vite dev server and the `/api` serverless functions.
 ```
 DATABASE_URL=postgres://user:pass@host.neon.tech/dbname?sslmode=require
 JWT_SECRET=some-random-secret-at-least-32-chars
+# Optional: TURNSTILE_SECRET_KEY, VITE_TURNSTILE_SITE_KEY (login widget)
+# Optional: OPS_R2_CREDENTIALS (private stats; skip locally)
 ```
 
-Replace `DATABASE_URL` with your Neon database connection string (pooled or unpooled, either works for the app). `JWT_SECRET` is used to sign session cookies; generate a random 32+ character string.
+Replace `DATABASE_URL` with your Neon database connection string (pooled or unpooled, either works for the app). `JWT_SECRET` is used to sign session cookies; generate a random 32+ character string. Without a Turnstile secret, login skips the widget check and logs a warning.
 
 ### `.env.migrate` (for migration scripts)
 

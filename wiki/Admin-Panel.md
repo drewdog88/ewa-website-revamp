@@ -10,12 +10,14 @@ There is a discreet admin entry point on the public site — click it and you'll
 
 ## Logging in
 
-[`LoginScreen.tsx`](https://github.com/drewdog88/ewa-website-revamp/blob/main/src/app/LoginScreen.tsx) presents a simple username + password form. On submit:
+[`LoginScreen.tsx`](https://github.com/drewdog88/ewa-website-revamp/blob/main/src/app/LoginScreen.tsx) presents a username + password form plus a Cloudflare **Turnstile** check. On submit:
 
-1. The credentials are sent to `POST /api/auth/login` via [`api/auth/login.js`](https://github.com/drewdog88/ewa-website-revamp/blob/main/api/auth/login.js).
-2. The handler looks up the `username` in the `users` table and runs `bcrypt.compare()` on the submitted password against the stored hash. Passwords are never stored in plaintext — only the bcrypt hash sits in the database.
-3. If the password matches, the server signs a **JWT** containing `{ sub: username }` with `JWT_SECRET`, sets a 7-day expiry, and returns it as an **HttpOnly, Secure, SameSite=Lax** cookie named `ewa_session`.
-4. The browser stores the cookie and attaches it automatically to every subsequent request. JavaScript can't read it (HttpOnly), which blunts token theft via XSS.
+1. The browser sends `{ username, password, turnstileToken }` to `POST /api/auth/login` via [`api/auth/login.js`](https://github.com/drewdog88/ewa-website-revamp/blob/main/api/auth/login.js).
+2. The handler verifies the Turnstile token with Cloudflare. A failed check returns `403 Security check failed`.
+3. Vercel **BotID** may flag the request; that is logged and only blocks login if `BOTID_ENFORCE_LOGIN=1`.
+4. The handler looks up the `username` in the `users` table and runs `bcrypt.compare()` on the submitted password against the stored hash. Passwords are never stored in plaintext — only the bcrypt hash sits in the database.
+5. If the password matches, the server signs a **JWT** containing `{ sub: username }` with `JWT_SECRET`, sets a 7-day expiry, and returns it as an **HttpOnly, Secure, SameSite=Lax** cookie named `ewa_session`.
+6. The browser stores the cookie and attaches it automatically to every subsequent request. JavaScript can't read it (HttpOnly), which blunts token theft via XSS.
 
 > See [Configuration](Configuration) for how `JWT_SECRET` is set (never committed to the repo).
 
@@ -84,6 +86,8 @@ The **Resources** tab manages the helpful links shown in the public Resources se
 - **An uploaded file** — a PDF, handbook, or document stored in the database as `bytea`.
 
 You can't have both a URL and an uploaded file on the same resource — choosing one clears the other. The public site resolves `url` if present, otherwise `/api/artifacts/<artifactId>`.
+
+**Order:** use the up/down arrows on each row. That writes `resources.sort_order` via `PATCH /api/admin/resources?action=reorder`. The public Resources grid and the footer (first four links) follow that order. New links append at the bottom. If every row still has `sort_order = 0`, the list falls back to title (A–Z) until someone moves an item.
 
 ### Uploading files
 

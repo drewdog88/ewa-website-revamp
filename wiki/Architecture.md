@@ -15,7 +15,8 @@ It ships as one static bundle to Vercel's CDN.
 
 There's no client-side router in play for navigation between "pages" — instead
 [`src/app/App.tsx`](https://github.com/drewdog88/ewa-website-revamp/blob/main/src/app/App.tsx)
-holds a single `view` state that swaps between three top-level screens:
+holds a `view` state for the three app screens, plus hash routes for short legal
+notices (`#privacy`, `#accessibility` → `LegalPages.tsx`):
 
 | `view` | Screen | Shown when |
 |---|---|---|
@@ -32,13 +33,14 @@ renders empty rather than taking down the page.
 
 Plain **Vercel Node functions**, one file per route, written as ES modules. They
 are deliberately thin — validate, run one or two SQL statements, return JSON.
-Three tiny shared helpers keep them consistent:
+Shared helpers keep them consistent:
 
 | Helper | File | Job |
 |---|---|---|
 | `sql` | `api/_lib/db.js` | The shared Neon client (`neon(DATABASE_URL)`) |
 | `json` / `methodGuard` / `readBody` | `api/_lib/http.js` | Uniform responses, method allow-lists, body parsing |
 | `requireAuth` / session helpers | `api/_lib/auth.js` | JWT session cookie verify + set/clear |
+| `recordResponse` / R2 | `api/_lib/ops-log.js`, `r2.js` | Best-effort private stats (not visitor analytics) |
 
 See the full list on the **[API Reference](API)**.
 
@@ -66,15 +68,16 @@ cache to invalidate, no second datastore to reconcile, no build step to trigger.
 ```
 ewa-website-revamp/
   api/
-    _lib/          db.js, http.js, auth.js, zelle.js  (shared helpers)
+    _lib/          db.js, http.js, auth.js, zelle.js, ops-log.js, r2.js
     admin/         clubs, news, officers, resources, fundraiser, artifacts  (auth)
     auth/          login, logout, me
     artifacts/     [id].js   (public file serving)
     *.js           public GETs: clubs, news, officers, resources, fundraiser
   src/
-    app/           App, PublicSite, AdminPanel, LoginScreen, PaymentModal, api.ts
+    app/           App, PublicSite, AdminPanel, LoginScreen, PaymentModal, LegalPages, api.ts
     app/components/ui/   shadcn/ui + Radix components
-    styles/        Tailwind v4 + theme.css (CSS-variable theming)
+    styles/        Tailwind v4 + theme.css; self-hosted fonts
+  observability/   optional NAS Grafana / Prometheus / R2 exporter
   scripts/         schema.sql + migration/seed tooling (*.mjs)
   wiki/            this documentation (synced to the GitHub Wiki)
   .github/workflows/   backup, restore-drill, restore, sync-wiki

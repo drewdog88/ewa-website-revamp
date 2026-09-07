@@ -49,9 +49,16 @@ There isn't a separate server. The API is a set of thin Node ESM functions under
 Vercel project. See [Architecture](Architecture) and [API Reference](API).
 
 **How is authentication handled?**
-Admin passwords are bcrypt-hashed (never plaintext). Login issues a signed JWT in
-an **HttpOnly, Secure, SameSite=Lax** cookie; every `/api/admin/*` call re-verifies
-it before touching the database. See [How It Works](How-It-Works)#authentication-in-detail.
+The login form uses Cloudflare Turnstile. Passwords are bcrypt-hashed (never
+plaintext). Login issues a signed JWT in an **HttpOnly, Secure, SameSite=Lax**
+cookie; every `/api/admin/*` call re-verifies it before touching the database.
+See [How It Works](How-It-Works)#authentication-in-detail.
+
+**Does the site track visitors or need an EU cookie banner?**
+No marketing analytics and no public forms. Cookies are for board login only.
+Turnstile runs on the admin login, not the public pages. Short privacy and
+accessibility pages are at `#privacy` and `#accessibility`. Washington Charities
+text is on the Pay / Donate modal; EIN and registration 1126748 are in the footer.
 
 **Why store files in Postgres instead of a blob store / S3?**
 So the backup story is trivially complete: a single `pg_dump` captures everything,
@@ -73,5 +80,8 @@ Install, point it at a Neon database via a local env file, apply the schema, see
 admin, and start the dev server. See [Development Process](Development-Process).
 
 **What's not done yet?**
-See the [Roadmap](Roadmap) — including removing the `noindex` meta tag before public
-launch.
+See the [Roadmap](Roadmap). Search indexing is already allowed (`index, follow`).
+
+**Where do I read about Grafana / `ops-log write failed`?**
+[Observability](Observability). Those writes are best-effort and private; they are
+not visitor analytics.

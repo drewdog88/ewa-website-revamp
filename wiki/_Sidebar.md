@@ -10,6 +10,7 @@
 - [Admin Panel](Admin-Panel)
 - [Deployment](Deployment)
 - [Operations & Troubleshooting](Operations)
+- [Observability](Observability)
 - [Backups & Recovery](Backups-and-Recovery)
 
 **Build on it**

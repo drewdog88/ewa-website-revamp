@@ -1,6 +1,6 @@
 # EWA observability
 
-Branch: `feat/observability`
+On `main` (merged). Optional NAS stack — the public site does not depend on it.
 
 Site health and app logs for https://www.eastlakewolfpack.org on the Synology NAS.
 Uses the **existing Grafana** at http://192.168.1.190:3000.

@@ -17,6 +17,13 @@ and deployed edge bundle.
 |---|---|---|---|
 | `DATABASE_URL` | Vercel env | **Pooled** Neon Postgres connection string the app & API use at runtime | Format: `postgres://...@...-pooler.neon.tech/...?sslmode=require` — the `-pooler` host is critical for short-lived serverless functions. Automatically set by the Neon → Vercel integration. |
 | `JWT_SECRET` | Vercel env | Signing key for admin session tokens | A long random string (e.g. 64 hex chars). Used by [`api/_lib/auth.js`](https://github.com/drewdog88/ewa-website-revamp/blob/main/api/_lib/auth.js) to sign and verify JWT cookies. If ever rotated, every admin is immediately logged out (harmless). |
+| `TURNSTILE_SECRET_KEY` | Vercel env | Verifies Cloudflare Turnstile tokens on `POST /api/auth/login` | If unset, login skips the check and logs a warning (board is not locked out). |
+| `VITE_TURNSTILE_SITE_KEY` | Vercel env (build) | Public Turnstile site key baked into the login widget | Optional; a production key is already in `Turnstile.tsx`. Use Cloudflare’s always-pass test key on previews if needed. |
+| `BOTID_ENFORCE_LOGIN` | Vercel env | When `1`, Vercel BotID **blocks** flagged logins | Default is advisory only (log, still allow). Keep off unless you are sure BotID is not false-flagging behind Cloudflare. |
+| `OPS_R2_CREDENTIALS` | Vercel env | `ACCESS_KEY_ID,SECRET_ACCESS_KEY` for private `ewa-ops` writes | Bucket-scoped token. If unset, ops logging is skipped. See [Observability](Observability). |
+| `OPS_R2_ACCOUNT_ID` | Vercel env | Cloudflare account id for the R2 host | Optional; a default is in `api/_lib/r2.js`. |
+| `OPS_R2_BUCKET` | Vercel env | R2 bucket name | Defaults to `ewa-ops`. |
+| `OPS_R2_KEY` | Vercel env | Object key for the stats snapshot | Defaults to `stats.json`. |
 
 ### Where to set them
 
@@ -93,6 +100,7 @@ Neither file is committed or tracked. Create them manually:
 # Runtime secrets for local dev
 echo 'DATABASE_URL=postgres://...-pooler.neon.tech/...?sslmode=require' > .env.local
 echo 'JWT_SECRET=<a-long-random-hex-string>' >> .env.local
+# Optional: TURNSTILE_SECRET_KEY, VITE_TURNSTILE_SITE_KEY, OPS_R2_CREDENTIALS
 
 # Migration/seed secrets
 echo 'NEW_DATABASE_URL=postgres://...-pooler.neon.tech/...?sslmode=require' > .env.migrate
@@ -137,3 +145,4 @@ The plaintext password never touches the database or the code.
   at deploy time.
 - **[API Reference](API)** — how `api/_lib/db.js` and `api/_lib/auth.js` consume
   the runtime secrets.
+- **[Observability](Observability)** — private R2 stats and NAS Grafana.

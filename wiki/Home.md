@@ -15,6 +15,7 @@
 [![API Reference](https://img.shields.io/badge/🔌_API-e8a020?style=for-the-badge&logoColor=black)](API)
 [![Backups](https://img.shields.io/badge/🛡_Backups-5c0e0e?style=for-the-badge&logoColor=white)](Backups-and-Recovery)
 [![Roadmap](https://img.shields.io/badge/🗺_Roadmap-1b355c?style=for-the-badge&logoColor=white)](Roadmap)
+[![Observability](https://img.shields.io/badge/📡_Observability-0c2340?style=for-the-badge&logoColor=white)](Observability)
 
 <br />
 
@@ -27,7 +28,7 @@
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=flat-square&logo=postgresql&logoColor=white)](https://www.postgresql.org)
 [![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-2088FF?style=flat-square&logo=githubactions&logoColor=white)](https://github.com/features/actions)
 
-**[🌐 Live site](https://ewa-website-revamp.vercel.app)** · **[📦 Repository](https://github.com/drewdog88/ewa-website-revamp)** · 501(c)(3) nonprofit · Tax ID 77-0616862
+**[🌐 Live site](https://www.eastlakewolfpack.org)** · **[📦 Repository](https://github.com/drewdog88/ewa-website-revamp)** · 501(c)(3) · Tax ID 77-0616862 · WA Charities #1126748
 
 </div>
 
@@ -53,6 +54,8 @@ developer can extend it.
 | 🛡️ | **Provable backups** | Nightly encrypted dumps + a weekly restore drill that fails loudly |
 | 💸 | **Real Zelle QR** | Scannable codes generated client-side, always in sync with the stored address |
 | 🌍 | **Safe in the open** | Public repo; secrets never enter it, passwords bcrypt-hashed, backups age-encrypted |
+| 🛡️ | **Login hardening** | Cloudflare Turnstile on admin login; Vercel BotID advisory |
+| 📋 | **Public notices** | `#privacy`, `#accessibility`, Charities disclosure on Pay / Donate |
 
 ## What is it?
 
@@ -117,6 +120,7 @@ the full request lifecycle on **[How It Works](How-It-Works)**.
 - **[Admin Panel](Admin-Panel)** — the board's guide to editing content
 - **[Deployment](Deployment)** — how it ships to Vercel
 - **[Operations & Troubleshooting](Operations)** — what breaks and how to tell
+- **[Observability](Observability)** — private R2 stats and NAS Grafana
 - **[Backups & Recovery](Backups-and-Recovery)** — dumps, drill, and the restore runbook
 
 **Build on it**

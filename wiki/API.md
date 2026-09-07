@@ -25,7 +25,7 @@ cookie; everything else is public.
 | GET | `/api/clubs` | Active clubs, ordered by `sort_order` | Each includes its active `payment_methods` for the giving UI |
 | GET | `/api/news` | Published announcements, newest first | Filters `is_published = TRUE`; maps `published_at`→`publishedAt` |
 | GET | `/api/officers` | Board officers, ordered by `sort_order` | |
-| GET | `/api/resources` | Active quick links / documents | `url` is the external link *or* `/api/artifacts/<id>` for uploads |
+| GET | `/api/resources` | Active quick links / documents, ordered by `sort_order`, then title | `url` is the external link *or* `/api/artifacts/<id>` for uploads |
 | GET | `/api/fundraiser` | The single active fundraiser row (or null) | `goal_cents` / `raised_cents` |
 | GET | `/api/artifacts/:id` | The raw file bytes | Public; `Content-Type` from stored mime; `Cache-Control: public, max-age=3600` |
 
@@ -58,7 +58,7 @@ single `url` field so the front-end doesn't care which it is.
 
 | Method | Path | Body | Effect |
 |---|---|---|---|
-| POST | `/api/auth/login` | `{ username, password }` | On success sets the `ewa_session` cookie; `401` on bad credentials |
+| POST | `/api/auth/login` | `{ username, password, turnstileToken }` | Verifies Turnstile, then bcrypt; sets `ewa_session`. `403` on failed security check; `401` on bad credentials |
 | POST | `/api/auth/logout` | — | Clears the session cookie |
 | GET | `/api/auth/me` | — (cookie) | `{ username }` if logged in, else `401` |
 
@@ -70,6 +70,10 @@ single `url` field so the front-end doesn't care which it is.
   `JWT_SECRET` env var, delivered as the **HttpOnly, Secure, SameSite=Lax**
   cookie `ewa_session`.
 - There is a single admin class — any valid session may edit all content.
+- Login also runs **Vercel BotID** (advisory unless `BOTID_ENFORCE_LOGIN=1`).
+- After `res.end`, `json()` best-effort writes aggregated counts to private R2
+  ([Observability](Observability)). A failed write is logged and does not change
+  the HTTP response.
 
 ---
 
@@ -83,7 +87,7 @@ after a successful write so the UI can update without a second request.
 | Clubs | `/api/admin/clubs` | GET · POST · PUT · DELETE | Manages clubs and their nested `payment_methods` |
 | News | `/api/admin/news` | GET · POST · PUT · DELETE | Returns camelCase (`isPublished`, `publishedAt`); publishing sets `published_at` |
 | Officers | `/api/admin/officers` | GET · POST · PUT · DELETE | |
-| Resources | `/api/admin/resources` | GET · POST · PUT · DELETE | Link either a `url` or an uploaded `artifactId` |
+| Resources | `/api/admin/resources` | GET · POST · PUT · PATCH · DELETE | Link either a `url` or an uploaded `artifactId`. `PATCH ?action=reorder` body `{ order: [ids] }` writes `sort_order` |
 | Fundraiser | `/api/admin/fundraiser` | GET · PUT | Single row — update headline / goal / raised / active |
 | Artifacts | `/api/admin/artifacts` | GET · POST · DELETE | File storage — see below |
 
@@ -122,7 +126,7 @@ because the raw snake_case column was returned instead).
 | Helper | File | Purpose |
 |---|---|---|
 | `sql` | `api/_lib/db.js` | Neon HTTP client bound to `DATABASE_URL` |
-| `json(res, status, body)` | `api/_lib/http.js` | JSON response + `no-store` |
+| `json(res, status, body, pathHint?)` | `api/_lib/http.js` | JSON response + `no-store` + best-effort ops log |
 | `methodGuard(req, res, allowed)` | `api/_lib/http.js` | Method allow-list → `405` |
 | `readBody(req)` | `api/_lib/http.js` | Parse JSON body (handles pre-parsed or streamed) |
 | `requireAuth(req, res)` | `api/_lib/auth.js` | Verify session → user or `401` |
