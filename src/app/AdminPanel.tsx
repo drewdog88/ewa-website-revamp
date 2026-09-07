@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import {
-  Plus, Pencil, Trash2, Save, Eye, ChevronLeft, X, Check, Globe,
+  Plus, Pencil, Trash2, Save, Eye, ChevronLeft, ChevronUp, ChevronDown, X, Check, Globe,
   Zap, CreditCard, LogOut, Users, Newspaper, Link2, Heart, Building2, Upload,
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
@@ -435,15 +435,34 @@ function ResourcesManager() {
     catch (e) { setError(e instanceof Error ? e.message : "Delete failed"); }
   };
 
+  const move = async (index: number, dir: -1 | 1) => {
+    const next = index + dir;
+    if (next < 0 || next >= items.length) return;
+    const order = items.map((r) => r.id);
+    [order[index], order[next]] = [order[next], order[index]];
+    try { setItems(await api.reorderResources(order)); }
+    catch (e) { setError(e instanceof Error ? e.message : "Reorder failed"); }
+  };
+
   return (
     <>
       <SectionHeader title="Quick Resources" subtitle="Helpful links shown in the Resources section and footer." action={<AddButton onClick={startNew} label="Add Link" />} />
       {error && <ErrorBanner msg={error} />}
       <div className="grid lg:grid-cols-2 gap-6 items-start">
         <div className="space-y-3">
-          {items.map((r) => (
+          {items.map((r, i) => (
             <div key={r.id} className={`bg-white border rounded-xl p-4 flex items-start gap-4 transition-all ${editingId === r.id ? "ring-2" : "hover:border-gray-300"}`}
               style={editingId === r.id ? { borderColor: MAROON, ["--tw-ring-color" as string]: MAROON } : {}}>
+              <div className="flex flex-col shrink-0 -ml-1">
+                <button type="button" onClick={() => move(i, -1)} disabled={i === 0} aria-label="Move up"
+                  className="p-1 rounded-lg text-gray-400 hover:text-gray-800 hover:bg-gray-100 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-gray-400">
+                  <ChevronUp size={16} />
+                </button>
+                <button type="button" onClick={() => move(i, 1)} disabled={i === items.length - 1} aria-label="Move down"
+                  className="p-1 rounded-lg text-gray-400 hover:text-gray-800 hover:bg-gray-100 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-gray-400">
+                  <ChevronDown size={16} />
+                </button>
+              </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
                   <span className="font-black text-sm uppercase truncate" style={{ color: BLACK, fontFamily: "var(--font-display)" }}>{r.title}</span>

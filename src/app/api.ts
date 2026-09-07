@@ -52,6 +52,7 @@ export interface Resource {
   url: string | null;
   artifactId?: number | null;
   isActive?: boolean;
+  sortOrder?: number;
 }
 
 export interface UploadedArtifact {
@@ -123,6 +124,7 @@ export const api = {
   createResource: (r: Partial<Resource>) => req<Resource[]>("/api/admin/resources", { method: "POST", ...body(r) }),
   updateResource: (id: number, r: Partial<Resource>) => req<Resource[]>(`/api/admin/resources?id=${id}`, { method: "PUT", ...body(r) }),
   deleteResource: (id: number) => req<Resource[]>(`/api/admin/resources?id=${id}`, { method: "DELETE" }),
+  reorderResources: (order: number[]) => req<Resource[]>("/api/admin/resources?action=reorder", { method: "PATCH", ...body({ order }) }),
 
   // ---- admin: fundraiser ----
   adminFundraiser: () => req<Fundraiser>("/api/admin/fundraiser"),
