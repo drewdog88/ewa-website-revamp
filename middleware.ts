@@ -1,12 +1,13 @@
 import { next } from '@vercel/edge';
 
-// Edge-level block for AI training/scraping bots.
+// Block AI training/scraping bots before the SPA loads.
 // This enforces at the network edge what public/robots.txt only requests
 // politely — misbehaving crawlers that ignore robots.txt get a hard 403.
 //
 // Googlebot, Bingbot, and normal visitors are unaffected. Blocking
 // Google-Extended here does NOT hurt Google Search indexing.
 export const config = {
+  runtime: 'nodejs',
   // Run only on page navigations, not static assets — keeps middleware
   // invocations (and cost) minimal. Skips /assets/* and any path with a
   // file extension (.js, .css, .png, .svg, .ico, ...).
