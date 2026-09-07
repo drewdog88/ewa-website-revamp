@@ -1,11 +1,12 @@
 // Tiny helpers for Vercel Node serverless functions.
 import { recordResponse } from "./ops-log.js";
 
-export async function json(res, status, body) {
+export async function json(res, status, body, pathHint) {
+  const req = res.req;
   res.status(status).setHeader("Content-Type", "application/json");
   res.setHeader("Cache-Control", "no-store");
   res.end(JSON.stringify(body));
-  await recordResponse(res.req, status, body);
+  await recordResponse(req, status, body, pathHint);
 }
 
 export function methodGuard(req, res, allowed) {

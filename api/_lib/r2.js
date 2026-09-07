@@ -46,15 +46,19 @@ function amzDate(now) {
   return now.toISOString().replace(/[:-]|\.\d{3}/g, "");
 }
 
-function sign({ method, path, body, now, cfg }) {
+function sign({ method, path, body, now, cfg, extra = {} }) {
   const date = amzDate(now);
   const ymd = date.slice(0, 8);
   const payloadHash = sha256Hex(body);
-  const canonicalHeaders =
-    `host:${cfg.host}\n` +
-    `x-amz-content-sha256:${payloadHash}\n` +
-    `x-amz-date:${date}\n`;
-  const signedHeaders = "host;x-amz-content-sha256;x-amz-date";
+  const headerMap = {
+    host: cfg.host,
+    "x-amz-content-sha256": payloadHash,
+    "x-amz-date": date,
+    ...extra,
+  };
+  const names = Object.keys(headerMap).map((n) => n.toLowerCase()).sort();
+  const canonicalHeaders = names.map((n) => `${n}:${headerMap[n]}\n`).join("");
+  const signedHeaders = names.join(";");
   const canonicalRequest = [
     method,
     path,
@@ -78,24 +82,26 @@ function sign({ method, path, body, now, cfg }) {
   return {
     date,
     payloadHash,
+    signedHeaders,
+    extra,
     authorization:
       `AWS4-HMAC-SHA256 Credential=${cfg.accessKey}/${scope}, ` +
       `SignedHeaders=${signedHeaders}, Signature=${signature}`,
   };
 }
 
-async function r2(method, objectKey, body = "") {
+async function r2(method, objectKey, body = "", extra = {}) {
   const cfg = config();
   const path = `/${cfg.bucket}/${objectKey}`;
   const now = new Date();
-  const signed = sign({ method, path, body, now, cfg });
+  const signed = sign({ method, path, body, now, cfg, extra });
   const res = await fetch(`https://${cfg.host}${path}`, {
     method,
     headers: {
       Authorization: signed.authorization,
       "x-amz-content-sha256": signed.payloadHash,
       "x-amz-date": signed.date,
-      ...(method === "PUT" ? { "Content-Type": "application/json" } : {}),
+      ...extra,
     },
     body: method === "GET" || method === "DELETE" ? undefined : body,
   });
@@ -113,13 +119,19 @@ export function r2ObjectKey() {
 
 export async function r2GetJson(objectKey) {
   const res = await r2("GET", objectKey);
-  if (res.status === 404) return null;
+  if (res.status === 404) return { data: null, etag: null };
   if (!res.ok) throw new Error(`R2 GET ${res.status}`);
-  return res.json();
+  return { data: await res.json(), etag: res.headers.get("etag") };
 }
 
-export async function r2PutJson(objectKey, data) {
+export async function r2PutJson(objectKey, data, etag) {
   const body = JSON.stringify(data);
-  const res = await r2("PUT", objectKey, body);
+  const extra = {
+    "content-type": "application/json",
+    ...(etag ? { "if-match": etag.trim() } : {}),
+  };
+  const res = await r2("PUT", objectKey, body, extra);
+  if (res.status === 412) return false;
   if (!res.ok) throw new Error(`R2 PUT ${res.status}`);
+  return true;
 }

@@ -142,7 +142,7 @@
       "targets": [
         { "expr": "ewa_login_total", "legendFormat": "{{result}}", "refId": "A" }
       ],
-      "title": "Admin logins (from Blob)",
+      "title": "Admin logins / sessions",
       "type": "stat"
     },
     {
@@ -168,6 +168,42 @@
       ],
       "title": "Recent API errors",
       "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": { "defaults": {}, "overrides": [] },
+      "gridPos": { "h": 6, "w": 8, "x": 0, "y": 33 },
+      "id": 12,
+      "options": { "colorMode": "value", "graphMode": "area", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false } },
+      "targets": [
+        { "expr": "ewa_cf_dns_queries_6h", "legendFormat": "queries", "refId": "A" }
+      ],
+      "title": "Cloudflare DNS queries (6h)",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": { "defaults": {}, "overrides": [] },
+      "gridPos": { "h": 6, "w": 8, "x": 8, "y": 33 },
+      "id": 13,
+      "options": { "colorMode": "value", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false } },
+      "targets": [
+        { "expr": "ewa_cf_dns_uncached_6h", "legendFormat": "uncached", "refId": "A" }
+      ],
+      "title": "Cloudflare DNS uncached (6h)",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": { "defaults": {}, "overrides": [] },
+      "gridPos": { "h": 6, "w": 8, "x": 16, "y": 33 },
+      "id": 14,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" } },
+      "targets": [
+        { "expr": "ewa_cf_dns_name_queries_6h", "legendFormat": "{{name}} {{code}}", "refId": "A" }
+      ],
+      "title": "Cloudflare DNS by name",
+      "type": "timeseries"
     }
   ],
   "schemaVersion": 39,

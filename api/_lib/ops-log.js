@@ -11,7 +11,7 @@ const EMPTY = {
   updatedAt: null,
   day: null,
   requests: {},
-  logins: { ok: 0, fail: 0, blocked: 0 },
+  logins: { ok: 0, fail: 0, blocked: 0, session: 0 },
   days: {},
   recent: [],
 };
@@ -21,16 +21,18 @@ function utcDay(date = new Date()) {
 }
 
 function requestPath(req) {
-  const raw = req?.url || "";
+  const raw = req?.url || req?.originalUrl || "";
+  if (!raw) return "unknown";
   try {
-    return new URL(raw, "http://localhost").pathname;
+    return new URL(raw, "http://localhost").pathname.replace(/\/+$/, "") || "/";
   } catch {
-    return String(raw).split("?")[0] || "unknown";
+    return String(raw).split("?")[0].replace(/\/+$/, "") || "unknown";
   }
 }
 
 function loginResult(path, status) {
-  if (path !== "/api/auth/login") return null;
+  if (path.endsWith("/api/auth/me") && status === 200) return "session";
+  if (!path.endsWith("/api/auth/login")) return null;
   if (status === 200) return "ok";
   if (status === 401 || status === 400) return "fail";
   if (status === 403) return "blocked";
@@ -63,9 +65,10 @@ function rollDay(state, nextDay) {
       loginsOk: Number(state.logins?.ok) || 0,
       loginsFail: Number(state.logins?.fail) || 0,
       loginsBlocked: Number(state.logins?.blocked) || 0,
+      loginsSession: Number(state.logins?.session) || 0,
     };
     state.requests = {};
-    state.logins = { ok: 0, fail: 0, blocked: 0 };
+    state.logins = { ok: 0, fail: 0, blocked: 0, session: 0 };
   }
   state.day = nextDay;
   const keep = Object.keys(state.days || {}).sort().slice(-MAX_DAY_SUMMARIES);
@@ -91,43 +94,49 @@ function normalize(data) {
       ok: Number(data.logins?.ok) || 0,
       fail: Number(data.logins?.fail) || 0,
       blocked: Number(data.logins?.blocked) || 0,
+      session: Number(data.logins?.session) || 0,
     },
     days: data.days && typeof data.days === "object" ? data.days : {},
     recent: Array.isArray(data.recent) ? data.recent : [],
   };
 }
 
-export function recordResponse(req, status, body) {
+export function recordResponse(req, status, body, pathHint) {
   if (!r2Configured()) return Promise.resolve();
-  return writeResponse(req, status, body).catch((err) => {
+  return writeResponse(req, status, body, pathHint).catch((err) => {
     console.error("ops-log write failed:", err?.message || err);
   });
 }
 
-async function writeResponse(req, status, body) {
+async function writeResponse(req, status, body, pathHint) {
   const objectKey = r2ObjectKey();
-  const path = requestPath(req);
+  const path = pathHint || requestPath(req);
   const now = new Date();
-  const existing = await r2GetJson(objectKey);
-  const state = normalize(existing || EMPTY);
 
-  rollDay(state, utcDay(now));
-  state.updatedAt = now.toISOString();
-  const key = `${path}|${status}`;
-  state.requests[key] = (Number(state.requests[key]) || 0) + 1;
+  for (let attempt = 0; attempt < 6; attempt++) {
+    const { data, etag } = await r2GetJson(objectKey);
+    const state = normalize(data || EMPTY);
 
-  const login = loginResult(path, status);
-  if (login) state.logins[login] = (Number(state.logins[login]) || 0) + 1;
+    rollDay(state, utcDay(now));
+    state.updatedAt = now.toISOString();
+    const key = `${path}|${status}`;
+    state.requests[key] = (Number(state.requests[key]) || 0) + 1;
 
-  if (status >= 400) {
-    state.recent.unshift({
-      ts: state.updatedAt,
-      path,
-      status,
-      message: sanitizeMessage(body),
-    });
+    const login = loginResult(path, status);
+    if (login) state.logins[login] = (Number(state.logins[login]) || 0) + 1;
+
+    if (status >= 400) {
+      state.recent.unshift({
+        ts: state.updatedAt,
+        path,
+        status,
+        message: sanitizeMessage(body),
+      });
+    }
+    state.recent = pruneRecent(state.recent, now);
+
+    if (await r2PutJson(objectKey, state, etag)) return;
+    await new Promise((resolve) => setTimeout(resolve, 25 * (attempt + 1)));
   }
-  state.recent = pruneRecent(state.recent, now);
-
-  await r2PutJson(objectKey, state);
+  throw new Error("R2 write lost the race after retries");
 }
