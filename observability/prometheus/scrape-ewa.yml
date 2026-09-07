@@ -1,0 +1,2 @@
+# Fragment only. Use prometheus.yml in this folder as the UniFi drop-in.
+# Kept so the jobs are visible without opening the full file.

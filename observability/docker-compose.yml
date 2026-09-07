@@ -1,0 +1,32 @@
+# Synology Container Manager project ewa-observability.
+# Same Grafana/Prometheus as UniFi. No tunnel. No UniFi compose changes.
+services:
+  blackbox:
+    image: prom/blackbox-exporter:v0.28.0
+    container_name: ewa-blackbox
+    restart: unless-stopped
+    ports:
+      - "9115:9115"
+    volumes:
+      - ./blackbox/config.yml:/etc/blackbox_exporter/config.yml:ro
+    command:
+      - "--config.file=/etc/blackbox_exporter/config.yml"
+
+  pushgateway:
+    image: prom/pushgateway:v1.11.1
+    container_name: ewa-pushgateway
+    restart: unless-stopped
+    ports:
+      - "9091:9091"
+
+  blob-exporter:
+    image: node:22-alpine
+    container_name: ewa-blob-exporter
+    restart: unless-stopped
+    env_file:
+      - ./blob/exporter.env
+    volumes:
+      - ./blob/export.mjs:/app/export.mjs:ro
+    command: ["node", "/app/export.mjs"]
+    depends_on:
+      - pushgateway
