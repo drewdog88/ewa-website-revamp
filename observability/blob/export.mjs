@@ -83,7 +83,7 @@ function toMetrics(stats) {
   }
 
   const logins = stats.logins || {};
-  for (const result of ["ok", "fail", "blocked"]) {
+  for (const result of ["ok", "fail", "blocked", "session"]) {
     lines.push(`ewa_login_total{result="${result}"} ${Number(logins[result]) || 0}`);
   }
 

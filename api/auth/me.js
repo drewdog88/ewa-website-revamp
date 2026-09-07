@@ -5,6 +5,6 @@ import { getUser } from "../_lib/auth.js";
 export default async function handler(req, res) {
   if (!methodGuard(req, res, ["GET"])) return;
   const user = getUser(req);
-  if (!user) return json(res, 401, { error: "Not authenticated" });
-  return json(res, 200, { username: user.username });
+  if (!user) return json(res, 401, { error: "Not authenticated" }, "/api/auth/me");
+  return json(res, 200, { username: user.username }, "/api/auth/me");
 }

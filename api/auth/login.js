@@ -43,7 +43,7 @@ export default async function handler(req, res) {
     const captcha = await verifyTurnstile(turnstileToken, clientIp(req));
     if (!captcha.ok) {
       console.warn("Turnstile rejected login attempt", { host: req.headers.host, reason: captcha.reason });
-      return json(res, 403, { error: "Security check failed" });
+      return json(res, 403, { error: "Security check failed" }, "/api/auth/login");
     }
 
     // Secondary: Vercel BotID classification, advisory by default. It can
@@ -57,20 +57,20 @@ export default async function handler(req, res) {
         reason: verification.classificationReason,
       });
       if (process.env.BOTID_ENFORCE_LOGIN === "1") {
-        return json(res, 403, { error: "Access denied" });
+        return json(res, 403, { error: "Access denied" }, "/api/auth/login");
       }
     }
 
-    if (!username || !password) return json(res, 400, { error: "Missing credentials" });
+    if (!username || !password) return json(res, 400, { error: "Missing credentials" }, "/api/auth/login");
 
     const rows = await sql`SELECT password_hash FROM users WHERE username = ${username}`;
     const ok = rows.length && (await bcrypt.compare(password, rows[0].password_hash));
-    if (!ok) return json(res, 401, { error: "Invalid username or password" });
+    if (!ok) return json(res, 401, { error: "Invalid username or password" }, "/api/auth/login");
 
     setSessionCookie(res, signSession(username));
-    return json(res, 200, { ok: true, username });
+    return json(res, 200, { ok: true, username }, "/api/auth/login");
   } catch (e) {
     console.error("POST /api/auth/login failed:", e);
-    return json(res, 500, { error: "Login failed" });
+    return json(res, 500, { error: "Login failed" }, "/api/auth/login");
   }
 }
