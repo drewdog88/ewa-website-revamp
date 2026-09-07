@@ -1,9 +1,11 @@
 // Tiny helpers for Vercel Node serverless functions.
+import { recordResponse } from "./ops-log.js";
 
 export function json(res, status, body) {
   res.status(status).setHeader("Content-Type", "application/json");
   res.setHeader("Cache-Control", "no-store");
   res.end(JSON.stringify(body));
+  return recordResponse(res.req, status, body);
 }
 
 export function methodGuard(req, res, allowed) {

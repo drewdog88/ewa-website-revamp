@@ -20,6 +20,7 @@ build/
 .env
 .env.*
 !.env.example
+observability/blob/exporter.env
 
 # OS / editor
 .DS_Store

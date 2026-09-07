@@ -1,0 +1,117 @@
+# Drop-in replacement for /volume1/docker/unifipoller/prometheus/config/prometheus.yml
+# Keeps UniFi jobs. Grafana still reads this Prometheus at :9090.
+# No tunnel: the NAS only makes outbound scrapes/pulls.
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+
+scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets: ["prometheus:9090"]
+
+  - job_name: unpoller
+    static_configs:
+      - targets: ["unpoller:9130"]
+    scrape_interval: 60s
+    scrape_timeout: 10s
+
+  - job_name: ewa-blackbox
+    metrics_path: /probe
+    params:
+      module: [http_2xx]
+    scrape_interval: 60s
+    scrape_timeout: 15s
+    static_configs:
+      - targets:
+          - https://www.eastlakewolfpack.org
+          - https://eastlakewolfpack.org
+          - https://ewa-website-revamp.vercel.app
+        labels:
+          project: ewa
+          kind: site
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: 192.168.1.190:9115
+
+  - job_name: ewa-api
+    metrics_path: /probe
+    params:
+      module: [http_api]
+    scrape_interval: 60s
+    scrape_timeout: 15s
+    static_configs:
+      - targets:
+          - https://www.eastlakewolfpack.org/api/news
+          - https://www.eastlakewolfpack.org/api/clubs
+        labels:
+          project: ewa
+          kind: api
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: 192.168.1.190:9115
+
+  - job_name: ewa-auth
+    metrics_path: /probe
+    params:
+      module: [http_auth]
+    scrape_interval: 60s
+    scrape_timeout: 15s
+    static_configs:
+      - targets:
+          - https://www.eastlakewolfpack.org/api/auth/me
+        labels:
+          project: ewa
+          kind: auth
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: 192.168.1.190:9115
+
+  - job_name: ewa-dns
+    metrics_path: /probe
+    scrape_interval: 60s
+    scrape_timeout: 10s
+    static_configs:
+      - targets: ["1.1.1.1"]
+        labels:
+          project: ewa
+          kind: dns
+          __param_module: dns_apex
+          dns_name: eastlakewolfpack.org
+      - targets: ["1.1.1.1"]
+        labels:
+          project: ewa
+          kind: dns
+          __param_module: dns_www
+          dns_name: www.eastlakewolfpack.org
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [dns_name]
+        target_label: instance
+      - target_label: __address__
+        replacement: 192.168.1.190:9115
+
+  - job_name: ewa-pushgateway
+    honor_labels: true
+    scrape_interval: 30s
+    static_configs:
+      - targets:
+          - 192.168.1.190:9091
+        labels:
+          project: ewa
