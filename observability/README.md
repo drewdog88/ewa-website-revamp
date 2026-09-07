@@ -3,7 +3,7 @@
 Branch: `feat/observability`
 
 Site health and app logs for https://www.eastlakewolfpack.org on the Synology NAS.
-Uses the **existing Grafana** at http://192.168.1.190:3000.
+Uses the **existing Grafana** at http://192.168.1.190:3000. On the LAN or VPN, use the real cert at https://grafana.eastlakewolfpack.org:3443.
 
 **No tunnel. No UniFi port forwards. No public object URL.**
 
@@ -12,6 +12,8 @@ Uses the **existing Grafana** at http://192.168.1.190:3000.
 | `ewa-blackbox` | 9115 | HTTPS + DNS probes |
 | `ewa-pushgateway` | 9091 | Holds app counters pulled from R2 |
 | `ewa-blob-exporter` | none | Private R2 GET → Pushgateway |
+| `ewa-cf-exporter` | none | Cloudflare DNS analytics → Pushgateway |
+| `ewa-grafana-proxy` | 3443 | Caddy TLS for Grafana (`grafana.eastlakewolfpack.org`) |
 
 ## Private R2 bucket
 
@@ -57,5 +59,14 @@ Replace UniFi Prometheus config with `prometheus/prometheus.yml` (UniFi jobs sta
 `/volume1/docker/unifipoller/grafana/provisioning/dashboards/ewa/ewa-site-health.json`
 
 Restart `ewa-blackbox`, `prometheus`, and `grafana`. Recreate `ewa-blob-exporter` after compose changes.
+
+Grafana TLS (Let’s Encrypt, DNS-01 via Cloudflare):
+
+- URL: https://grafana.eastlakewolfpack.org:3443
+- Hostname: `grafana.eastlakewolfpack.org` (grey-cloud A to `192.168.1.190`, not the WAN IP)
+- Proxy: `ewa-grafana-proxy` on **3443** so DSM keeps 443. If Docker needs sudo, `caddy/start-host.sh` can bind 3443 as the NAS user.
+- Cert files: `/volume1/docker/ewa-observability/caddy/certs/` (not in git)
+- Re-issue: `node observability/caddy/issue.mjs` after `npm install` in `observability/caddy`. Create the printed TXT at `_acme-challenge.grafana`, then write `challenge.ready`.
+- After compose changes: `sudo /usr/local/bin/docker-compose -f /volume1/docker/ewa-observability/docker-compose.yml up -d grafana-proxy` and `sudo /usr/local/bin/docker restart grafana` so `GF_SERVER_ROOT_URL` applies.
 
 Do **not** add these services to the UniFi compose. Do **not** delete `unifipoller`.

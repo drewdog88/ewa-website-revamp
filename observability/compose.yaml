@@ -46,3 +46,13 @@ services:
     command: ["node", "/app/export.mjs"]
     depends_on:
       - pushgateway
+
+  grafana-proxy:
+    image: caddy:2.10-alpine
+    container_name: ewa-grafana-proxy
+    restart: unless-stopped
+    ports:
+      - "3443:3443"
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./caddy/certs:/certs:ro
