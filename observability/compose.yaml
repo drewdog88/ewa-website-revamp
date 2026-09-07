@@ -23,10 +23,26 @@ services:
     image: node:22-alpine
     container_name: ewa-blob-exporter
     restart: unless-stopped
+    environment:
+      NODE_OPTIONS: --disable-warning=DEP0169
     env_file:
       - ./blob/exporter.env
     volumes:
       - ./blob/export.mjs:/app/export.mjs:ro
+    command: ["node", "/app/export.mjs"]
+    depends_on:
+      - pushgateway
+
+  cf-exporter:
+    image: node:22-alpine
+    container_name: ewa-cf-exporter
+    restart: unless-stopped
+    environment:
+      NODE_OPTIONS: --disable-warning=DEP0169
+    env_file:
+      - ./cloudflare/exporter.env
+    volumes:
+      - ./cloudflare/export.mjs:/app/export.mjs:ro
     command: ["node", "/app/export.mjs"]
     depends_on:
       - pushgateway

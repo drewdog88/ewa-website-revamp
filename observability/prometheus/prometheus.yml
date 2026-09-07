@@ -29,7 +29,6 @@ scrape_configs:
       - targets:
           - https://www.eastlakewolfpack.org
           - https://eastlakewolfpack.org
-          - https://ewa-website-revamp.vercel.app
         labels:
           project: ewa
           kind: site

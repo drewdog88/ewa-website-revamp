@@ -21,6 +21,7 @@ build/
 .env.*
 !.env.example
 observability/blob/exporter.env
+observability/cloudflare/exporter.env
 
 # OS / editor
 .DS_Store

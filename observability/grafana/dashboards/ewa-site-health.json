@@ -17,12 +17,12 @@
         },
         "overrides": []
       },
-      "gridPos": { "h": 6, "w": 8, "x": 0, "y": 0 },
+      "gridPos": { "h": 6, "w": 8, "x": 0, "y": 12 },
       "id": 1,
       "options": { "colorMode": "background", "graphMode": "none", "justifyMode": "auto", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "auto" },
       "pluginVersion": "11.0.0",
       "targets": [
-        { "expr": "probe_success{project=\"ewa\",instance=~\"$target\"}", "legendFormat": "{{instance}}", "refId": "A" }
+        { "expr": "max by (instance) (probe_success{project=\"ewa\",job=\"ewa-blackbox\",kind=\"site\",instance=~\"$target\"})", "legendFormat": "{{instance}}", "refId": "A" }
       ],
       "title": "Site status",
       "type": "stat"
@@ -33,25 +33,39 @@
         "defaults": { "unit": "s", "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": 0 }, { "color": "yellow", "value": 1 }, { "color": "red", "value": 3 }] } },
         "overrides": []
       },
-      "gridPos": { "h": 6, "w": 8, "x": 8, "y": 0 },
+      "gridPos": { "h": 6, "w": 8, "x": 8, "y": 12 },
       "id": 2,
       "options": { "colorMode": "value", "graphMode": "area", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false } },
       "pluginVersion": "11.0.0",
       "targets": [
-        { "expr": "probe_duration_seconds{project=\"ewa\",instance=~\"$target\"}", "legendFormat": "{{instance}}", "refId": "A" }
+        { "expr": "max by (instance) (probe_duration_seconds{project=\"ewa\",job=\"ewa-blackbox\",kind=\"site\",instance=~\"$target\"})", "legendFormat": "{{instance}}", "refId": "A" }
       ],
       "title": "Probe duration",
       "type": "stat"
     },
     {
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "fieldConfig": { "defaults": { "decimals": 0 }, "overrides": [] },
-      "gridPos": { "h": 6, "w": 8, "x": 16, "y": 0 },
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": 0 },
+              { "color": "green", "value": 200 },
+              { "color": "yellow", "value": 300 },
+              { "color": "red", "value": 400 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 6, "w": 8, "x": 16, "y": 12 },
       "id": 3,
-      "options": { "colorMode": "value", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false } },
+      "options": { "colorMode": "background", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false } },
       "pluginVersion": "11.0.0",
       "targets": [
-        { "expr": "probe_http_status_code{project=\"ewa\",instance=~\"$target\"}", "legendFormat": "{{instance}}", "refId": "A" }
+        { "expr": "max by (instance) (probe_http_status_code{project=\"ewa\",job=\"ewa-blackbox\",kind=\"site\",instance=~\"$target\"})", "legendFormat": "{{instance}}", "refId": "A" }
       ],
       "title": "HTTP status",
       "type": "stat"
@@ -59,11 +73,11 @@
     {
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
-      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 6 },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 18 },
       "id": 4,
       "options": { "legend": { "displayMode": "list", "placement": "bottom" } },
       "targets": [
-        { "expr": "probe_duration_seconds{project=\"ewa\",instance=~\"$target\"}", "legendFormat": "{{instance}}", "refId": "A" }
+        { "expr": "max by (instance) (probe_duration_seconds{project=\"ewa\",job=\"ewa-blackbox\",kind=\"site\",instance=~\"$target\"})", "legendFormat": "{{instance}}", "refId": "A" }
       ],
       "title": "Latency",
       "type": "timeseries"
@@ -71,12 +85,12 @@
     {
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "fieldConfig": { "defaults": { "unit": "s", "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": 0 }, { "color": "yellow", "value": 1209600 }, { "color": "green", "value": 2592000 }] } }, "overrides": [] },
-      "gridPos": { "h": 6, "w": 12, "x": 0, "y": 14 },
+      "gridPos": { "h": 6, "w": 12, "x": 0, "y": 26 },
       "id": 5,
       "options": { "colorMode": "background", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false } },
       "pluginVersion": "11.0.0",
       "targets": [
-        { "expr": "probe_ssl_earliest_cert_expiry{project=\"ewa\",instance=~\"$target\"} - time()", "legendFormat": "{{instance}}", "refId": "A" }
+        { "expr": "max by (instance) (probe_ssl_earliest_cert_expiry{project=\"ewa\",job=\"ewa-blackbox\",kind=\"site\",instance=~\"$target\"} - time())", "legendFormat": "{{instance}}", "refId": "A" }
       ],
       "title": "TLS certificate remaining",
       "type": "stat"
@@ -84,11 +98,11 @@
     {
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "fieldConfig": { "defaults": { "max": 1, "min": 0, "unit": "percentunit" }, "overrides": [] },
-      "gridPos": { "h": 6, "w": 12, "x": 12, "y": 14 },
+      "gridPos": { "h": 6, "w": 12, "x": 12, "y": 26 },
       "id": 6,
       "options": { "legend": { "displayMode": "list", "placement": "bottom" } },
       "targets": [
-        { "expr": "avg_over_time(probe_success{project=\"ewa\",instance=~\"$target\"}[24h])", "legendFormat": "{{instance}}", "refId": "A" }
+        { "expr": "avg by (instance) (avg_over_time(probe_success{project=\"ewa\",job=\"ewa-blackbox\",kind=\"site\",instance=~\"$target\"}[24h]))", "legendFormat": "{{instance}}", "refId": "A" }
       ],
       "title": "Uptime (24h)",
       "type": "timeseries"
@@ -104,11 +118,11 @@
         },
         "overrides": []
       },
-      "gridPos": { "h": 5, "w": 8, "x": 0, "y": 20 },
+      "gridPos": { "h": 5, "w": 8, "x": 0, "y": 32 },
       "id": 7,
       "options": { "colorMode": "background", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false } },
       "targets": [
-        { "expr": "probe_success{project=\"ewa\",kind=\"dns\"}", "legendFormat": "{{instance}}", "refId": "A" }
+        { "expr": "max by (instance) (probe_success{project=\"ewa\",kind=\"dns\"})", "legendFormat": "{{instance}}", "refId": "A" }
       ],
       "title": "DNS",
       "type": "stat"
@@ -124,11 +138,11 @@
         },
         "overrides": []
       },
-      "gridPos": { "h": 5, "w": 8, "x": 8, "y": 20 },
+      "gridPos": { "h": 5, "w": 8, "x": 8, "y": 32 },
       "id": 8,
       "options": { "colorMode": "background", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false } },
       "targets": [
-        { "expr": "probe_success{project=\"ewa\",kind=~\"api|auth\"}", "legendFormat": "{{instance}}", "refId": "A" }
+        { "expr": "max by (instance) (probe_success{project=\"ewa\",kind=~\"api|auth\"})", "legendFormat": "{{instance}}", "refId": "A" }
       ],
       "title": "API probes",
       "type": "stat"
@@ -136,7 +150,7 @@
     {
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "fieldConfig": { "defaults": {}, "overrides": [] },
-      "gridPos": { "h": 5, "w": 8, "x": 16, "y": 20 },
+      "gridPos": { "h": 5, "w": 8, "x": 16, "y": 32 },
       "id": 9,
       "options": { "colorMode": "value", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false } },
       "targets": [
@@ -148,19 +162,19 @@
     {
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "fieldConfig": { "defaults": {}, "overrides": [] },
-      "gridPos": { "h": 8, "w": 16, "x": 0, "y": 25 },
+      "gridPos": { "h": 8, "w": 16, "x": 0, "y": 37 },
       "id": 10,
       "options": { "legend": { "displayMode": "list", "placement": "bottom" } },
       "targets": [
         { "expr": "ewa_api_requests_total", "legendFormat": "{{path}} {{status}}", "refId": "A" }
       ],
-      "title": "API responses (from Blob)",
+      "title": "API responses",
       "type": "timeseries"
     },
     {
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "fieldConfig": { "defaults": {}, "overrides": [] },
-      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 25 },
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 37 },
       "id": 11,
       "options": { "colorMode": "background", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false } },
       "targets": [
@@ -170,40 +184,164 @@
       "type": "stat"
     },
     {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 45 },
+      "id": 15,
+      "title": "Cloudflare DNS — last 6 hours (lookup traffic, not errors)",
+      "type": "row",
+      "panels": []
+    },
+    {
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "fieldConfig": { "defaults": {}, "overrides": [] },
-      "gridPos": { "h": 6, "w": 8, "x": 0, "y": 33 },
+      "description": "How many times the internet asked Cloudflare for eastlakewolfpack.org in the last 6 hours. A few hundred is normal. This is traffic, not failures. Zero would mean nobody is resolving the domain.",
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 0,
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "yellow", "value": 0 }, { "color": "blue", "value": 1 }] }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 6, "w": 8, "x": 0, "y": 46 },
       "id": 12,
-      "options": { "colorMode": "value", "graphMode": "area", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false } },
+      "options": { "colorMode": "value", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false } },
       "targets": [
-        { "expr": "ewa_cf_dns_queries_6h", "legendFormat": "queries", "refId": "A" }
+        { "expr": "ewa_cf_dns_queries_6h", "legendFormat": "lookups", "refId": "A" }
       ],
-      "title": "Cloudflare DNS queries (6h)",
+      "title": "DNS lookups",
       "type": "stat"
     },
     {
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "fieldConfig": { "defaults": {}, "overrides": [] },
-      "gridPos": { "h": 6, "w": 8, "x": 8, "y": 33 },
+      "description": "Share of those lookups answered from Cloudflare's DNS cache. Low is normal for a small site with short TTLs. It is not an outage.",
+      "fieldConfig": {
+        "defaults": {
+          "max": 1,
+          "min": 0,
+          "unit": "percentunit",
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "blue", "value": 0 }] }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 6, "w": 8, "x": 8, "y": 46 },
       "id": 13,
       "options": { "colorMode": "value", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false } },
       "targets": [
-        { "expr": "ewa_cf_dns_uncached_6h", "legendFormat": "uncached", "refId": "A" }
+        { "expr": "1 - (ewa_cf_dns_uncached_6h / clamp_min(ewa_cf_dns_queries_6h, 1))", "legendFormat": "cache hit", "refId": "A" }
       ],
-      "title": "Cloudflare DNS uncached (6h)",
+      "title": "DNS cache hit",
       "type": "stat"
     },
     {
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "fieldConfig": { "defaults": {}, "overrides": [] },
-      "gridPos": { "h": 6, "w": 8, "x": 16, "y": 33 },
+      "description": "Which hostnames were asked for. NOERROR means Cloudflare found the record. SERVFAIL/NXDOMAIN would mean a DNS problem.",
+      "fieldConfig": { "defaults": { "decimals": 0 }, "overrides": [] },
+      "gridPos": { "h": 6, "w": 8, "x": 16, "y": 46 },
       "id": 14,
-      "options": { "legend": { "displayMode": "list", "placement": "bottom" } },
+      "options": { "showHeader": true, "sortBy": [{ "desc": true, "displayName": "Lookups" }] },
       "targets": [
-        { "expr": "ewa_cf_dns_name_queries_6h", "legendFormat": "{{name}} {{code}}", "refId": "A" }
+        { "expr": "ewa_cf_dns_name_queries_6h", "format": "table", "instant": true, "refId": "A" }
       ],
-      "title": "Cloudflare DNS by name",
-      "type": "timeseries"
+      "title": "Lookups by hostname",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": { "Time": true, "__name__": true, "instance": true, "job": true, "project": true },
+            "renameByName": { "name": "Hostname", "code": "Answer", "Value": "Lookups" }
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "description": "Which Cloudflare DNS data center answered lookups in the last 6 hours. Same idea as Cloudflare's colo map. GraphQL on the Free plan; bubble size is lookup count.",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "continuous-Blues" },
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "blue", "value": 0 }] }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 14, "w": 24, "x": 0, "y": 0 },
+      "id": 16,
+      "options": {
+        "basemap": {
+          "name": "CARTO Voyager",
+          "type": "xyz",
+          "config": {
+            "attribution": "&copy; <a href=\"https://www.openstreetmap.org/copyright\">OpenStreetMap</a> contributors &copy; <a href=\"https://carto.com/attributions\">CARTO</a>",
+            "url": "https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png?key=__CARTO_TILES_KEY__"
+          }
+        },
+        "controls": { "mouseWheelZoom": true, "showAttribution": true, "showZoom": true },
+        "layers": [
+          {
+            "config": {
+              "showLegend": true,
+              "style": {
+                "color": { "field": "Lookups", "fixed": "dark-blue" },
+                "opacity": 0.7,
+                "size": { "field": "Lookups", "fixed": 6, "max": 22, "min": 4 },
+                "symbol": { "fixed": "img/icons/marker/circle.svg", "mode": "fixed" },
+                "textConfig": { "fontSize": 12, "offsetX": 0, "offsetY": 0, "textAlign": "center", "textBaseline": "middle" }
+              }
+            },
+            "location": { "latitude": "lat", "longitude": "lon", "mode": "coords" },
+            "name": "Data centers",
+            "tooltip": true,
+            "type": "markers"
+          }
+        ],
+        "view": { "allLayers": true, "id": "fit", "lat": 30, "lon": -30, "zoom": 1.5 }
+      },
+      "pluginVersion": "11.0.0",
+      "targets": [
+        { "expr": "ewa_cf_dns_colo_queries_6h", "format": "table", "instant": true, "refId": "A" }
+      ],
+      "title": "DNS queries by data center",
+      "transformations": [
+        {
+          "id": "convertFieldType",
+          "options": {
+            "conversions": [
+              { "destinationType": "number", "targetField": "lat" },
+              { "destinationType": "number", "targetField": "lon" },
+              { "destinationType": "number", "targetField": "Value" }
+            ]
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": { "Time": true, "__name__": true, "instance": true, "job": true, "project": true },
+            "renameByName": { "Value": "Lookups", "city": "City", "colo": "Colo", "country": "Country" }
+          }
+        }
+      ],
+      "type": "geomap"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "description": "Ranked Cloudflare DNS data centers for the last 6 hours.",
+      "fieldConfig": { "defaults": { "decimals": 0 }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 52 },
+      "id": 17,
+      "options": { "showHeader": true, "sortBy": [{ "desc": true, "displayName": "Lookups" }] },
+      "targets": [
+        { "expr": "ewa_cf_dns_colo_queries_6h", "format": "table", "instant": true, "refId": "A" }
+      ],
+      "title": "Data centers",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": { "Time": true, "__name__": true, "instance": true, "job": true, "project": true, "lat": true, "lon": true },
+            "renameByName": { "Value": "Lookups", "city": "City", "colo": "Colo", "country": "Country" }
+          }
+        }
+      ],
+      "type": "table"
     }
   ],
   "schemaVersion": 39,
@@ -229,8 +367,9 @@
         "includeAll": true,
         "label": "Target",
         "name": "target",
-        "query": "label_values(probe_success{project=\"ewa\"}, instance)",
+        "query": "label_values(probe_success{project=\"ewa\",job=\"ewa-blackbox\",kind=\"site\"}, instance)",
         "refresh": 2,
+        "regex": "/eastlakewolfpack\\.org$/",
         "type": "query"
       }
     ]
@@ -239,5 +378,5 @@
   "timezone": "browser",
   "title": "EWA site health",
   "uid": "ewa-site-health",
-  "version": 1
+  "version": 2
 }

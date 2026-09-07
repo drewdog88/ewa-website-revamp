@@ -35,6 +35,19 @@ Cloudflare dashboard → **R2** → **Overview** → **API Tokens** → Create A
 
 Do not use a global Cloudflare API token. Do not reuse tokens from other buckets.
 
+## Cloudflare DNS stats
+
+A second NAS puller reads the Cloudflare DNS analytics API (free plan: last 6 hours) and pushes totals to the same Grafana.
+
+Create a **zone-scoped** API token (not the R2 token):
+
+- Zone → Analytics → Read
+- Zone → DNS → Read
+- Zone → Zone → Read
+- Resources: `eastlakewolfpack.org` only
+
+Put it in `/volume1/docker/ewa-observability/cloudflare/exporter.env` as `OPS_CF_API_TOKEN`.
+
 ## NAS deploy
 
 Copy `observability/` to `/volume1/docker/ewa-observability`. Copy `blob/exporter.env.example` to `blob/exporter.env` and fill the read-only keys.
