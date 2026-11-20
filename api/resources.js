@@ -1,6 +1,7 @@
 // GET /api/resources — public list of active quick links / resources.
 import { sql } from "./_lib/db.js";
 import { json, methodGuard } from "./_lib/http.js";
+import { resourceUrl } from "./_lib/urls.js";
 
 export default async function handler(req, res) {
   if (!methodGuard(req, res, ["GET"])) return;
@@ -14,7 +15,7 @@ export default async function handler(req, res) {
       title: r.title,
       description: r.description,
       // Prefer an external URL; otherwise serve the attached artifact.
-      url: r.url || (r.artifact_id ? `/api/artifacts/${r.artifact_id}` : null),
+      url: resourceUrl(r.url) || (r.artifact_id ? `/api/artifacts/${r.artifact_id}` : null),
     })));
   } catch (e) {
     console.error("GET /api/resources failed:", e);

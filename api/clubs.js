@@ -5,6 +5,7 @@
 //   paymentLink/paymentLabel — primary non-Zelle payment method
 import { sql } from "./_lib/db.js";
 import { json, methodGuard } from "./_lib/http.js";
+import { httpUrl, httpsUrl, zelleUrl } from "./_lib/urls.js";
 
 export default async function handler(req, res) {
   if (!methodGuard(req, res, ["GET"])) return;
@@ -21,9 +22,11 @@ export default async function handler(req, res) {
 
     const byClub = new Map();
     for (const m of methods) {
+      const value = m.type === "zelle" ? zelleUrl(m.value) : httpsUrl(m.value);
+      if (!value) continue;
       if (!byClub.has(m.club_id)) byClub.set(m.club_id, []);
       byClub.get(m.club_id).push({
-        type: m.type, label: m.label, value: m.value, displayToken: m.display_token,
+        type: m.type, label: m.label, value, displayToken: m.display_token,
       });
     }
 
@@ -35,7 +38,7 @@ export default async function handler(req, res) {
         id: c.id,
         name: c.name,
         description: c.description,
-        websiteUrl: c.website_url,
+        websiteUrl: httpUrl(c.website_url),
         active: c.is_active,
         sortOrder: c.sort_order,
         paymentMethods: pms,
