@@ -15,15 +15,31 @@ const CHARCOAL = "#262b33";
 const LOGO_LOCKUP = "/assets/eastlake_wolves_lockup_1.png";
 const LOGO_WOLF = "/assets/ewa-wolf.jpg";
 
+// Allow-list for hrefs rendered from news bodies. Matches api/_lib/urls newsHref.
+function safeNewsHref(href: string): string | null {
+  const trimmed = href.trim();
+  if (/^#[A-Za-z0-9_-]+$/.test(trimmed)) return trimmed;
+  if (/^\/#[A-Za-z0-9_-]+$/.test(trimmed)) return trimmed;
+  if (/^\/api\/artifacts\/\d+$/.test(trimmed)) return trimmed;
+  try {
+    const url = new URL(trimmed);
+    if ((url.protocol === "http:" || url.protocol === "https:") && !url.username && !url.password) {
+      return url.toString();
+    }
+  } catch { /* not a URL */ }
+  return null;
+}
+
 // Render a plain-text body with safe, clickable links. Supports friendly
 // markdown-style links — [Label](https://…) — and bare http(s) URLs. It builds
 // real React elements (never dangerouslySetInnerHTML), so anything an admin
 // types is treated as text and can never inject markup. Newlines are preserved
-// by the caller's `whitespace-pre-line`.
+// by the caller's `whitespace-pre-line`. Unsafe hrefs (javascript:, //host, …)
+// stay plain text.
 function renderBody(text: string): ReactNode {
   // href may be an external URL, a site path (/api/artifacts/3), or an in-page
   // section anchor (#resources). Bare http(s) URLs are auto-linked too.
-  const re = /\[([^\]]+)\]\((https?:\/\/[^\s)]+|[/#][^\s)]+)\)|(https?:\/\/[^\s]+)/g;
+  const re = /\[([^\]]+)\]\((https?:\/\/[^\s)]+|\/\/[^\s)]+|[/#][^\s)]+)\)|(https?:\/\/[^\s]+)/g;
   const nodes: ReactNode[] = [];
   let last = 0;
   let key = 0;
@@ -31,16 +47,21 @@ function renderBody(text: string): ReactNode {
   while ((m = re.exec(text)) !== null) {
     if (m.index > last) nodes.push(text.slice(last, m.index));
     const label = m[1] ?? m[3];
-    const href = m[2] ?? m[3];
-    const external = /^https?:\/\//.test(href);
-    nodes.push(
-      <a key={key++} href={href}
-        {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-        className="font-bold underline underline-offset-2 hover:opacity-80 transition-opacity"
-        style={{ color: MAROON }}>
-        {label}
-      </a>
-    );
+    const rawHref = m[2] ?? m[3];
+    const href = safeNewsHref(rawHref);
+    if (href) {
+      const external = /^https?:\/\//.test(href);
+      nodes.push(
+        <a key={key++} href={href}
+          {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+          className="font-bold underline underline-offset-2 hover:opacity-80 transition-opacity"
+          style={{ color: MAROON }}>
+          {label}
+        </a>
+      );
+    } else {
+      nodes.push(m[0]);
+    }
     last = m.index + m[0].length;
   }
   if (last < text.length) nodes.push(text.slice(last));

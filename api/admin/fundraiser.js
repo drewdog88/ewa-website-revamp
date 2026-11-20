@@ -4,6 +4,7 @@
 import { sql } from "../_lib/db.js";
 import { json, methodGuard, readBody } from "../_lib/http.js";
 import { requireAuth } from "../_lib/auth.js";
+import { normalizeCents, normalizeText } from "../_lib/urls.js";
 
 async function current() {
   let rows = await sql`SELECT * FROM fundraiser ORDER BY id LIMIT 1`;
@@ -26,12 +27,28 @@ export default async function handler(req, res) {
 
     const b = await readBody(req);
     const f = await current();
+
+    let headline = f.headline;
+    if (b.headline !== undefined) {
+      const h = normalizeText(b.headline, { label: "Headline", max: 200 });
+      if (h.error) return json(res, 400, { error: h.error });
+      headline = h.text ?? "Fundraiser";
+    }
+
+    const goal = normalizeCents(b.goalCents, "Goal");
+    if (goal.error) return json(res, 400, { error: goal.error });
+    const raised = normalizeCents(b.raisedCents, "Raised");
+    if (raised.error) return json(res, 400, { error: raised.error });
+
+    let isActive = f.isActive;
+    if (b.isActive !== undefined) isActive = !!b.isActive;
+
     await sql`
       UPDATE fundraiser SET
-        headline = ${b.headline ?? f.headline},
-        goal_cents = ${b.goalCents ?? f.goalCents},
-        raised_cents = ${b.raisedCents ?? f.raisedCents},
-        is_active = ${b.isActive ?? f.isActive}
+        headline = ${headline},
+        goal_cents = ${goal.skip ? f.goalCents : goal.cents},
+        raised_cents = ${raised.skip ? f.raisedCents : raised.cents},
+        is_active = ${isActive}
       WHERE id = ${f.id}`;
     return json(res, 200, await current());
   } catch (e) {

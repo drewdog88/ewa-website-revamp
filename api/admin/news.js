@@ -3,6 +3,7 @@
 import { sql } from "../_lib/db.js";
 import { json, methodGuard, readBody } from "../_lib/http.js";
 import { requireAuth } from "../_lib/auth.js";
+import { normalizeNewsBody, normalizeText } from "../_lib/urls.js";
 
 // Return camelCase rows so the admin UI reads isPublished/publishedAt correctly
 // (the public /api/news maps the same way — without this the UI saw only the raw
@@ -21,6 +22,31 @@ const all = async () => {
   }));
 };
 
+function prepareNews(b) {
+  const title = normalizeText(b.title, { label: "Title", max: 300, allowEmpty: false });
+  if (title.error) return title;
+  const body = normalizeNewsBody(b.body);
+  if (body.error) return body;
+  const tag = normalizeText(b.tag, { label: "Tag", max: 80 });
+  if (tag.error) return tag;
+  const published = !!b.isPublished;
+  let publishedAt = null;
+  if (b.publishedAt != null && b.publishedAt !== "") {
+    const d = new Date(b.publishedAt);
+    if (Number.isNaN(d.getTime())) return { error: "publishedAt is not a valid date" };
+    publishedAt = d.toISOString();
+  } else if (published) {
+    publishedAt = new Date().toISOString();
+  }
+  return {
+    title: title.text,
+    body: body.body,
+    tag: tag.text,
+    published,
+    publishedAt,
+  };
+}
+
 export default async function handler(req, res) {
   if (!methodGuard(req, res, ["GET", "POST", "PUT", "DELETE"])) return;
   if (!requireAuth(req, res)) return;
@@ -30,24 +56,24 @@ export default async function handler(req, res) {
 
     if (req.method === "POST") {
       const b = await readBody(req);
-      if (!b.title) return json(res, 400, { error: "Title is required" });
-      const published = b.isPublished ?? false;
+      const prepared = prepareNews(b);
+      if (prepared.error) return json(res, 400, { error: prepared.error });
       await sql`
         INSERT INTO news (title, body, tag, is_published, published_at)
-        VALUES (${b.title}, ${b.body ?? null}, ${b.tag ?? null}, ${published},
-                ${b.publishedAt ?? (published ? new Date().toISOString() : null)})`;
+        VALUES (${prepared.title}, ${prepared.body}, ${prepared.tag}, ${prepared.published},
+                ${prepared.publishedAt})`;
       return json(res, 201, await all());
     }
 
     if (req.method === "PUT") {
       if (!id) return json(res, 400, { error: "id required" });
       const b = await readBody(req);
-      if (!b.title) return json(res, 400, { error: "Title is required" });
-      const published = b.isPublished ?? false;
+      const prepared = prepareNews(b);
+      if (prepared.error) return json(res, 400, { error: prepared.error });
       await sql`
-        UPDATE news SET title = ${b.title}, body = ${b.body ?? null},
-          tag = ${b.tag ?? null}, is_published = ${published},
-          published_at = ${b.publishedAt ?? (published ? new Date().toISOString() : null)}
+        UPDATE news SET title = ${prepared.title}, body = ${prepared.body},
+          tag = ${prepared.tag}, is_published = ${prepared.published},
+          published_at = ${prepared.publishedAt}
         WHERE id = ${id}`;
       return json(res, 200, await all());
     }
