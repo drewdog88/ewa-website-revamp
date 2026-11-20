@@ -6,34 +6,7 @@
 // it cannot execute as a page on this origin.
 import { sql } from "../_lib/db.js";
 import { json, methodGuard } from "../_lib/http.js";
-
-function safeFilename(name) {
-  const base = String(name || "file")
-    .replace(/[\u0000-\u001f\u007f"\\]/g, "")
-    .replace(/[^A-Za-z0-9._ ()-]+/g, "_")
-    .replace(/^\.+/, "")
-    .slice(0, 120);
-  return base || "file";
-}
-
-function detectedInlineMime(buf) {
-  if (!buf || buf.length < 3) return null;
-  if (buf.length >= 5 && buf.subarray(0, 5).toString("latin1") === "%PDF-") return "application/pdf";
-  if (buf.length >= 8 && buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47) return "image/png";
-  if (buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff) return "image/jpeg";
-  if (buf.length >= 6) {
-    const gif = buf.subarray(0, 6).toString("latin1");
-    if (gif === "GIF87a" || gif === "GIF89a") return "image/gif";
-  }
-  if (
-    buf.length >= 12 &&
-    buf.subarray(0, 4).toString("latin1") === "RIFF" &&
-    buf.subarray(8, 12).toString("latin1") === "WEBP"
-  ) {
-    return "image/webp";
-  }
-  return null;
-}
+import { detectedInlineMime, safeFilename } from "../_lib/artifacts.js";
 
 export default async function handler(req, res) {
   if (!methodGuard(req, res, ["GET"])) return;

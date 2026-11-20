@@ -2,9 +2,11 @@
 //   GET                         -> list artifact metadata (no bytes)
 //   POST { filename, mimeType, dataBase64 } -> store a file, returns {id, url}
 //   DELETE ?id                  -> delete an artifact
+// Client-claimed mimeType is ignored; MIME is sniffed from bytes. Filename is sanitized.
 import { sql } from "../_lib/db.js";
 import { json, methodGuard, readBody } from "../_lib/http.js";
 import { requireAuth } from "../_lib/auth.js";
+import { safeFilename, storeMime } from "../_lib/artifacts.js";
 
 const MAX_BYTES = 8 * 1024 * 1024; // 8 MB ceiling to stay within serverless limits
 
@@ -26,9 +28,11 @@ export default async function handler(req, res) {
       const buf = Buffer.from(b.dataBase64, "base64");
       if (!buf.length) return json(res, 400, { error: "Empty file" });
       if (buf.length > MAX_BYTES) return json(res, 413, { error: "File too large (max 8 MB)" });
+      const filename = safeFilename(b.filename);
+      const mimeType = storeMime(buf);
       const [row] = await sql`
         INSERT INTO artifacts (filename, mime_type, bytes)
-        VALUES (${b.filename}, ${b.mimeType ?? "application/octet-stream"}, decode(${b.dataBase64}, 'base64'))
+        VALUES (${filename}, ${mimeType}, decode(${b.dataBase64}, 'base64'))
         RETURNING id, filename, mime_type`;
       return json(res, 201, { id: row.id, filename: row.filename, mimeType: row.mime_type, url: `/api/artifacts/${row.id}` });
     }
