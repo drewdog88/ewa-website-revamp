@@ -10,26 +10,53 @@
 import { sql } from "../_lib/db.js";
 import { json, methodGuard, readBody } from "../_lib/http.js";
 import { requireAuth } from "../_lib/auth.js";
+import { httpsUrl, normalizeWebsite, zelleUrl } from "../_lib/urls.js";
 import { buildZelleUrl, decodeZelle } from "../_lib/zelle.js";
+
+function prepareMethods(methods) {
+  const prepared = [];
+  for (const m of methods || []) {
+    let value = typeof m.value === "string" ? m.value : null;
+    let token = null;
+    if (m.type === "zelle") {
+      if (m.name && m.token) {
+        value = buildZelleUrl(String(m.name).slice(0, 200), String(m.token).slice(0, 200));
+      }
+      const safe = zelleUrl(value);
+      if (!safe) {
+        if (!value) continue;
+        return { error: "Zelle link must be an https URL on enroll.zellepay.com" };
+      }
+      value = safe;
+      token = (typeof m.token === "string" && m.token) || decodeZelle(value)?.token || null;
+    } else if (value) {
+      const safe = httpsUrl(value);
+      if (!safe) return { error: "Payment link must be an https URL" };
+      value = safe;
+    } else {
+      continue;
+    }
+    prepared.push({
+      type: m.type,
+      label: m.label ?? null,
+      value,
+      token,
+      qr: m.qrSettings ?? m.qr_settings ?? null,
+      isActive: m.isActive ?? true,
+    });
+  }
+  return { methods: prepared };
+}
 
 async function replaceMethods(clubId, methods) {
   await sql`DELETE FROM payment_methods WHERE club_id = ${clubId}`;
   let order = 0;
-  for (const m of methods || []) {
-    let value = m.value || null;
-    let token = null;
-    let qr = null;
-    if (m.type === "zelle") {
-      if (m.name && m.token) value = buildZelleUrl(m.name, m.token);
-      token = m.token || (value ? decodeZelle(value)?.token : null) || null;
-      qr = m.qrSettings ?? m.qr_settings ?? null;
-    }
-    if (!value) continue; // skip incomplete methods
+  for (const m of methods) {
     await sql`
       INSERT INTO payment_methods
         (club_id, type, label, value, display_token, qr_settings, sort_order, is_active)
-      VALUES (${clubId}, ${m.type}, ${m.label ?? null}, ${value},
-              ${token}, ${qr}, ${order++}, ${m.isActive ?? true})`;
+      VALUES (${clubId}, ${m.type}, ${m.label}, ${m.value},
+              ${m.token}, ${m.qr}, ${order++}, ${m.isActive})`;
   }
 }
 
@@ -78,13 +105,17 @@ export default async function handler(req, res) {
     if (req.method === "POST") {
       const b = await readBody(req);
       if (!b.name) return json(res, 400, { error: "Club name is required" });
+      const website = normalizeWebsite(b.websiteUrl);
+      if (website.error) return json(res, 400, { error: website.error });
+      const prepared = prepareMethods(b.paymentMethods);
+      if (prepared.error) return json(res, 400, { error: prepared.error });
       const [row] = await sql`
         INSERT INTO clubs (name, description, website_url, is_active, sort_order)
-        VALUES (${b.name}, ${b.description ?? null}, ${b.websiteUrl ?? null},
+        VALUES (${b.name}, ${b.description ?? null}, ${website.url},
                 ${b.active ?? true},
                 COALESCE((SELECT MAX(sort_order)+1 FROM clubs), 0))
         RETURNING id`;
-      await replaceMethods(row.id, b.paymentMethods);
+      await replaceMethods(row.id, prepared.methods);
       return json(res, 201, await loadAll());
     }
 
@@ -92,11 +123,15 @@ export default async function handler(req, res) {
       if (!id) return json(res, 400, { error: "id required" });
       const b = await readBody(req);
       if (!b.name) return json(res, 400, { error: "Club name is required" });
+      const website = normalizeWebsite(b.websiteUrl);
+      if (website.error) return json(res, 400, { error: website.error });
+      const prepared = prepareMethods(b.paymentMethods);
+      if (prepared.error) return json(res, 400, { error: prepared.error });
       await sql`
         UPDATE clubs SET name = ${b.name}, description = ${b.description ?? null},
-          website_url = ${b.websiteUrl ?? null}, is_active = ${b.active ?? true}
+          website_url = ${website.url}, is_active = ${b.active ?? true}
         WHERE id = ${id}`;
-      await replaceMethods(id, b.paymentMethods);
+      await replaceMethods(id, prepared.methods);
       return json(res, 200, await loadAll());
     }
 

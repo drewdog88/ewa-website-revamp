@@ -3,6 +3,7 @@
 import { sql } from "../_lib/db.js";
 import { json, methodGuard, readBody } from "../_lib/http.js";
 import { requireAuth } from "../_lib/auth.js";
+import { normalizeEmail } from "../_lib/urls.js";
 
 const all = () => sql`SELECT id, name, role, email, sort_order FROM officers ORDER BY sort_order, name`;
 
@@ -25,9 +26,11 @@ export default async function handler(req, res) {
     if (req.method === "POST") {
       const b = await readBody(req);
       if (!b.name) return json(res, 400, { error: "Name is required" });
+      const mail = normalizeEmail(b.email);
+      if (mail.error) return json(res, 400, { error: mail.error });
       await sql`
         INSERT INTO officers (name, role, email, sort_order)
-        VALUES (${b.name}, ${b.role ?? null}, ${b.email ?? null},
+        VALUES (${b.name}, ${b.role ?? null}, ${mail.email},
                 COALESCE((SELECT MAX(sort_order)+1 FROM officers), 0))`;
       return json(res, 201, await all());
     }
@@ -36,7 +39,9 @@ export default async function handler(req, res) {
       if (!id) return json(res, 400, { error: "id required" });
       const b = await readBody(req);
       if (!b.name) return json(res, 400, { error: "Name is required" });
-      await sql`UPDATE officers SET name = ${b.name}, role = ${b.role ?? null}, email = ${b.email ?? null} WHERE id = ${id}`;
+      const mail = normalizeEmail(b.email);
+      if (mail.error) return json(res, 400, { error: mail.error });
+      await sql`UPDATE officers SET name = ${b.name}, role = ${b.role ?? null}, email = ${mail.email} WHERE id = ${id}`;
       return json(res, 200, await all());
     }
 

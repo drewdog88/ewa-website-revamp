@@ -46,3 +46,27 @@ export function resourceUrl(value) {
 export function isSafeEmail(value) {
   return typeof value === "string" && value.length <= 254 && EMAIL.test(value.trim()) && value.trim() === value;
 }
+
+/** Optional website field for admin club writes. Empty -> null. */
+export function normalizeWebsite(value) {
+  if (value == null || value === "") return { url: null };
+  const url = httpUrl(value);
+  if (!url) return { error: "Website must be an http(s) URL" };
+  return { url };
+}
+
+/** Optional resource link for admin writes. Empty -> null. */
+export function normalizeResourceLink(value) {
+  if (value == null || value === "") return { url: null };
+  const url = httpUrl(value);
+  if (!url) return { error: "Link must be an http(s) URL" };
+  return { url };
+}
+
+/** Optional officer email for admin writes. Empty -> null. */
+export function normalizeEmail(value) {
+  if (value == null || value === "") return { email: null };
+  const email = typeof value === "string" ? value.trim() : "";
+  if (!isSafeEmail(email)) return { error: "Email address is not valid" };
+  return { email };
+}

@@ -3,6 +3,7 @@
 import { sql } from "../_lib/db.js";
 import { json, methodGuard, readBody } from "../_lib/http.js";
 import { requireAuth } from "../_lib/auth.js";
+import { normalizeResourceLink } from "../_lib/urls.js";
 
 async function all() {
   const rows = await sql`
@@ -33,9 +34,11 @@ export default async function handler(req, res) {
     if (req.method === "POST") {
       const b = await readBody(req);
       if (!b.title) return json(res, 400, { error: "Title is required" });
+      const link = normalizeResourceLink(b.url);
+      if (link.error) return json(res, 400, { error: link.error });
       await sql`
         INSERT INTO resources (title, description, url, artifact_id, is_active, sort_order)
-        VALUES (${b.title}, ${b.description ?? null}, ${b.url ?? null}, ${b.artifactId ?? null},
+        VALUES (${b.title}, ${b.description ?? null}, ${link.url}, ${b.artifactId ?? null},
                 ${b.isActive ?? true}, COALESCE((SELECT MAX(sort_order)+1 FROM resources), 0))`;
       return json(res, 201, await all());
     }
@@ -44,8 +47,10 @@ export default async function handler(req, res) {
       if (!id) return json(res, 400, { error: "id required" });
       const b = await readBody(req);
       if (!b.title) return json(res, 400, { error: "Title is required" });
+      const link = normalizeResourceLink(b.url);
+      if (link.error) return json(res, 400, { error: link.error });
       await sql`UPDATE resources SET title = ${b.title}, description = ${b.description ?? null},
-        url = ${b.url ?? null}, artifact_id = ${b.artifactId ?? null},
+        url = ${link.url}, artifact_id = ${b.artifactId ?? null},
         is_active = ${b.isActive ?? true} WHERE id = ${id}`;
       return json(res, 200, await all());
     }
